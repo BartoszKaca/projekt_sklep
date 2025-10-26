@@ -20,3 +20,4 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+/docker/mysql-data/mysql.sock
