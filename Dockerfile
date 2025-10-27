@@ -13,3 +13,6 @@ COPY . /var/www/html
 RUN composer install
 
 CMD php artisan serve --host=0.0.0.0 --port=8000
+RUN apt-get update && apt-get install -y curl \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs

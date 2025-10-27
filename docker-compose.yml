@@ -12,10 +12,13 @@ services:
       - .:/var/www/html
     ports:
       - "8000:8000"
+      - "5173:5173"
     depends_on:
       - db
     networks:
       - laravel
+    environment:
+      - CHOKIDAR_USEPOLLING=true
 
   db:
     image: mysql:8.0
