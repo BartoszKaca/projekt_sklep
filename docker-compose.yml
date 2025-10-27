@@ -27,7 +27,7 @@ services:
       MYSQL_USER: laravel
       MYSQL_PASSWORD: laravel
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - ./docker/mysql-data:/var/lib/mysql
     networks:

@@ -3,7 +3,7 @@ $host = 'db';
 $port = 3306;
 $db   = 'sklep_laravel';
 $user = 'laravel';
-$pass = 'laraveldo';
+$pass = 'laravel';
 
 $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
 
