@@ -139,4 +139,8 @@ class Product extends Model
             'reason' => $reason,
         ]);
     }
+     public function orderItems()
+    {
+        return $this->hasMany(\App\Models\OrderItem::class);
+    }
 }
