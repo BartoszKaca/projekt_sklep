@@ -1,1 +1,226 @@
-{{-- resources/views/admin/categories/index.blade.php --}}\n@extends('layouts.admin')\n\n@section('title', 'Kategorie')\n\n@push('styles')\n<style>\n    .categories-grid {\n        display: grid;\n        gap: 1rem;\n    }\n\n    .category-card {\n        background: white;\n        border: 1px solid var(--border);\n        border-radius: 12px;\n        padding: 1.25rem;\n        display: grid;\n        grid-template-columns: auto 1fr auto auto;\n        gap: 1rem;\n        align-items: center;\n        transition: all 0.2s;\n    }\n\n    .category-card:hover {\n        box-shadow: 0 4px 12px rgba(0,0,0,0.08);\n    }\n\n    .category-icon {\n        width: 48px;\n        height: 48px;\n        border-radius: 10px;\n        background: linear-gradient(135deg, var(--primary), var(--secondary));\n        display: flex;\n        align-items: center;\n        justify-content: center;\n        color: white;\n        font-size: 1.25rem;\n    }\n\n    .category-info h4 {\n        font-weight: 600;\n        margin-bottom: 0.25rem;\n    }\n\n    .category-info p {\n        font-size: 0.875rem;\n        color: var(--gray);\n    }\n\n    .category-count {\n        text-align: center;\n        padding: 0.5rem 1rem;\n        background: var(--light-gray);\n        border-radius: 8px;\n    }\n\n    .category-count strong {\n        display: block;\n        font-size: 1.5rem;\n        font-weight: 700;\n    }\n\n    .category-count span {\n        font-size: 0.75rem;\n        color: var(--gray);\n    }\n</style>\n@endpush\n\n@section('content')\n<div class="page-header">\n    <div class="breadcrumb">\n        <a href="{{ route('admin.dashboard') }}">Admin</a>\n        <span>/</span>\n        <span>Kategorie</span>\n    </div>\n    <h1 class="page-title">Kategorie produktów</h1>\n    <p class="page-subtitle">Organizuj swój asortyment</p>\n</div>\n\n<!-- Add Category Card -->\n<div class="form-card" style="margin-bottom: 2rem;">\n    <h3 class="section-title">Dodaj nową kategorię</h3>\n    \n    <form method="POST" action="{{ route('admin.categories.store') }}">\n        @csrf\n        <div class="form-row">\n            <div class="form-group">\n                <label class="form-label required">Nazwa kategorii</label>\n                <input type="text" name="name" class="form-input @error('name') error @enderror"  \n                       value="{{ old('name') }}" placeholder="Np. Płyty CD" required>\n                @error('name')\n                    <div class="error-message"><i class="fas fa-exclamation-circle"></i> {{ $message }}</div>\n                @enderror\n            </div>\n\n            <div class="form-group">\n                <label class="form-label">Opis</label>\n                <input type="text" name="description" class="form-input"  \n                       value="{{ old('description') }}" placeholder="Krótki opis kategorii">\n            </div>\n        </div>\n\n        <div style="display: flex; justify-content: space-between; align-items: center;">\n            <div class="checkbox-group">\n                <input type="checkbox" name="is_active" id="is_active" value="1" checked>\n                <label for="is_active">Aktywna (widoczna w sklepie)</label>\n            </div>\n            \n            <button type="submit" class="btn btn-primary">\n                <i class="fas fa-plus"></i> Dodaj kategorię\n            </button>\n        </div>\n    </form>\n</div>\n\n<!-- Categories List -->\n<div class="categories-grid">\n    @forelse($categories ?? [] as $category)\n    <div class="category-card" data-category-id="{{ $category->id }}">\n        <div class="category-icon">\n            <i class="fas fa-tag"></i>\n        </div>\n\n        <div class="category-info">\n            <h4>{{ $category->name }}</h4>\n            <p>{{ $category->description ?: 'Brak opisu' }}</p>\n        </div>\n\n        <div class="category-count">\n            <strong>{{ $category->products_count ?? 0 }}</strong>\n            <span>produktów</span>\n        </div>\n\n        <div class="action-btns">\n            <button onclick="editCategory({{ $category->id }}, {{ json_encode($category->name) }}, {{ json_encode($category->description ?? '') }}, {{ $category->is_active ? 'true' : 'false' }})"  \n                    class="action-btn edit" title="Edytuj">\n                <i class="fas fa-edit"></i>\n            </button>\n            \n            @if($category->products_count == 0)\n            <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" style="margin: 0;"  \n                  onsubmit="return confirm('Czy na pewno chcesz usunąć tę kategorię?')">\n                @csrf\n                @method('DELETE')\n                <button type="submit" class="action-btn delete" title="Usuń">\n                    <i class="fas fa-trash"></i>\n                </button>\n            </form>\n            @endif\n\n            <span class="badge {{ $category->is_active ? 'badge-success' : 'badge-danger' }}">\n                {{ $category->is_active ? 'Aktywna' : 'Nieaktywna' }}\n            </span>\n        </div>\n    </div>\n    @empty\n    <div class="empty-state" style="background: white; padding: 3rem; border-radius: 16px;">\n        <i class="fas fa-tags"></i>\n        <h3>Brak kategorii</h3>\n        <p>Dodaj pierwszą kategorię używając formularza powyżej</p>\n    </div>\n    @endforelse\n</div>\n\n<!-- Edit Category Modal -->\n<div id="editModal" class="modal">\n    <div class="modal-content">\n        <div class="modal-header">\n            <h3 class="modal-title">Edytuj kategorię</h3>\n            <button class="modal-close" onclick="closeEditModal()">\n                <i class="fas fa-times"></i>\n            </button>\n        </div>\n        <form id="editForm" method="POST">\n            @csrf\n            @method('PUT')\n            <div class="modal-body">\n                <div class="form-group">\n                    <label class="form-label required">Nazwa kategorii</label>\n                    <input type="text" name="name" id="edit_name" class="form-input" required>\n                </div>\n\n                <div class="form-group">\n                    <label class="form-label">Opis</label>\n                    <input type="text" name="description" id="edit_description" class="form-input">\n                </div>\n\n                <div class="form-group">\n                    <div class="checkbox-group">\n                        <input type="checkbox" name="is_active" id="edit_is_active" value="1">\n                        <label for="edit_is_active">Aktywna</label>\n                    </div>\n                </div>\n            </div>\n            <div class="modal-footer">\n                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Anuluj</button>\n                <button type="submit" class="btn btn-primary">\n                    <i class="fas fa-save"></i> Zapisz zmiany\n                </button>\n            </div>\n        </form>\n    </div>\n</div>\n\n@push('scripts')\n<script>\n    function editCategory(id, name, description, isActive) {\n        document.getElementById('edit_name').value = name;\n        document.getElementById('edit_description').value = description || '';\n        document.getElementById('edit_is_active').checked = isActive;\n        document.getElementById('editForm').action = `/admin/categories/${id}`;\n        document.getElementById('editModal').classList.add('active');\n    }\n\n    function closeEditModal() {\n        document.getElementById('editModal').classList.remove('active');\n    }\n\n    document.getElementById('editModal').addEventListener('click', function(e) {\n        if (e.target === this) closeEditModal();\n    });\n</script>\n@endpush\n@endsection\n
+{{-- resources/views/admin/categories/index.blade.php --}}
+@extends('layouts.admin')
+
+@section('title', 'Kategorie')
+
+@push('styles')
+<style>
+    .categories-grid {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .category-card {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        gap: 1rem;
+        align-items: center;
+        transition: all 0.2s;
+    }
+
+    .category-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .category-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+    }
+
+    .category-info h4 {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .category-info p {
+        font-size: 0.875rem;
+        color: var(--gray);
+    }
+
+    .category-count {
+        text-align: center;
+        padding: 0.5rem 1rem;
+        background: var(--light-gray);
+        border-radius: 8px;
+    }
+
+    .category-count strong {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .category-count span {
+        font-size: 0.75rem;
+        color: var(--gray);
+    }
+</style>
+@endpush
+
+@section('content')
+<div class="page-header">
+    <div class="breadcrumb">
+        <a href="{{ route('admin.dashboard') }}">Admin</a>
+        <span>/</span>
+        <span>Kategorie</span>
+    </div>
+    <h1 class="page-title">Kategorie produktów</h1>
+    <p class="page-subtitle">Organizuj swój asortyment</p>
+</div>
+
+<!-- Add Category Card -->
+<div class="form-card" style="margin-bottom: 2rem;">
+    <h3 class="section-title">Dodaj nową kategorię</h3>
+    
+    <form method="POST" action="{{ route('admin.categories.store') }}">
+        @csrf
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label required">Nazwa kategorii</label>
+                <input type="text" name="name" class="form-input @error('name') error @enderror"  
+                       value="{{ old('name') }}" placeholder="Np. Płyty CD" required>
+                @error('name')
+                    <div class="error-message"><i class="fas fa-exclamation-circle"></i> {{ $message }}</div>
+                @enderror
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Opis</label>
+                <input type="text" name="description" class="form-input"  
+                       value="{{ old('description') }}" placeholder="Krótki opis kategorii">
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="checkbox-group">
+                <input type="checkbox" name="is_active" id="is_active" value="1" checked>
+                <label for="is_active">Aktywna (widoczna w sklepie)</label>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Dodaj kategorię
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Categories List -->
+<div class="categories-grid">
+    @forelse($categories ?? [] as $category)
+    <div class="category-card" data-category-id="{{ $category->id }}">
+        <div class="category-icon">
+            <i class="fas fa-tag"></i>
+        </div>
+
+        <div class="category-info">
+            <h4>{{ $category->name }}</h4>
+            <p>{{ $category->description ?: 'Brak opisu' }}</p>
+        </div>
+
+        <div class="category-count">
+            <strong>{{ $category->products_count ?? 0 }}</strong>
+            <span>produktów</span>
+        </div>
+
+        <div class="action-btns">
+            <button onclick="editCategory({{ $category->id }}, {{ json_encode($category->name) }}, {{ json_encode($category->description ?? '') }}, {{ $category->is_active ? 'true' : 'false' }})"  
+                    class="action-btn edit" title="Edytuj">
+                <i class="fas fa-edit"></i>
+            </button>
+            
+            @if($category->products_count == 0)
+            <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" style="margin: 0;"  
+                  onsubmit="return confirm('Czy na pewno chcesz usunąć tę kategorię?')">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="action-btn delete" title="Usuń">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </form>
+            @endif
+
+            <span class="badge {{ $category->is_active ? 'badge-success' : 'badge-danger' }}">
+                {{ $category->is_active ? 'Aktywna' : 'Nieaktywna' }}
+            </span>
+        </div>
+    </div>
+    @empty
+    <div class="empty-state" style="background: white; padding: 3rem; border-radius: 16px;">
+        <i class="fas fa-tags"></i>
+        <h3>Brak kategorii</h3>
+        <p>Dodaj pierwszą kategorię używając formularza powyżej</p>
+    </div>
+    @endforelse
+</div>
+
+<!-- Edit Category Modal -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Edytuj kategorię</h3>
+            <button class="modal-close" onclick="closeEditModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="editForm" method="POST">
+            @csrf
+            @method('PUT')
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label required">Nazwa kategorii</label>
+                    <input type="text" name="name" id="edit_name" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Opis</label>
+                    <input type="text" name="description" id="edit_description" class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="is_active" id="edit_is_active" value="1">
+                        <label for="edit_is_active">Aktywna</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Anuluj</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Zapisz zmiany
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    function editCategory(id, name, description, isActive) {
+        document.getElementById('edit_name').value = name;
+        document.getElementById('edit_description').value = description || '';
+        document.getElementById('edit_is_active').checked = isActive;
+        document.getElementById('editForm').action = `/admin/categories/${id}`;
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').classList.remove('active');
+    }
+
+    document.getElementById('editModal').addEventListener('click', function(e) {
+        if (e.target === this) closeEditModal();
+    });
+</script>
+@endpush
+@endsection
