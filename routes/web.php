@@ -15,7 +15,7 @@ use App\Http\Controllers\Admin\ReportController;
 
 // Public routes
 Route::get('/', function () {
-    return view('welcome');
+    return view('home');
 })->name('home');
 
 // Authentication routes
