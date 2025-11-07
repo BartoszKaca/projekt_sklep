@@ -88,7 +88,7 @@
         <div class="form-row">
             <div class="form-group">
                 <label class="form-label required">Nazwa kategorii</label>
-                <input type="text" name="name" class="form-input @error('name') error @enderror"  
+                <input type="text" name="name" class="form-input @error('name') error @enderror" 
                        value="{{ old('name') }}" placeholder="Np. Płyty CD" required>
                 @error('name')
                     <div class="error-message"><i class="fas fa-exclamation-circle"></i> {{ $message }}</div>
@@ -97,7 +97,7 @@
 
             <div class="form-group">
                 <label class="form-label">Opis</label>
-                <input type="text" name="description" class="form-input"  
+                <input type="text" name="description" class="form-input" 
                        value="{{ old('description') }}" placeholder="Krótki opis kategorii">
             </div>
         </div>
@@ -134,13 +134,13 @@
         </div>
 
         <div class="action-btns">
-            <button onclick="editCategory({{ $category->id }}, {{ json_encode($category->name) }}, {{ json_encode($category->description ?? '') }}, {{ $category->is_active ? 'true' : 'false' }})"  
+            <button onclick="editCategory({{ $category->id }}, {{ json_encode($category->name) }}, {{ json_encode($category->description ?? '') }}, {{ $category->is_active ? 'true' : 'false' }})" 
                     class="action-btn edit" title="Edytuj">
                 <i class="fas fa-edit"></i>
             </button>
             
             @if($category->products_count == 0)
-            <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" style="margin: 0;"  
+            <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" style="margin: 0;" 
                   onsubmit="return confirm('Czy na pewno chcesz usunąć tę kategorię?')">
                 @csrf
                 @method('DELETE')
