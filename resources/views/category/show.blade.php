@@ -14,18 +14,23 @@
     <div class="products-grid">
         @forelse($products as $product)
             <div class="product-card">
-                <div class="product-image">
-                    @if($product->primaryImage)
-                        <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
-                    @else
-                        <i class="fas fa-compact-disc"></i>
-                    @endif
-                </div>
+                <a href="{{ route('product.show', $product->slug) }}">
+                    <div class="product-image">
+                        @if(optional($product->primaryImage)->path)
+                            <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
+                        @else
+                            <i class="fas fa-compact-disc"></i>
+                        @endif
+                    </div>
+                </a>
+
                 <div class="product-info">
                     <div class="product-category">{{ $category->name }}</div>
-                    <h3 class="product-name">{{ $product->name }}</h3>
+                    <a href="{{ route('product.show', $product->slug) }}">
+                        <h3 class="product-name">{{ $product->name }}</h3>
+                    </a>
                     <div class="product-price">
-                        <span class="price-current">{{ number_format($product->getFinalPrice(), 2) }} zł</span>
+                        <span class="price-current">{{ number_format($product->getFinalPrice() ?? $product->price, 2) }} zł</span>
                     </div>
                 </div>
             </div>

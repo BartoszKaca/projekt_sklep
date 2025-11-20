@@ -513,27 +513,21 @@
     <!-- Categories Navigation -->
     <div class="categories-nav">
         <div class="categories-content">
-            <a href="{{ route('home') }}" class="cat-link {{ request()->routeIs('home') ? 'active' : '' }}">
-                <i class="fas fa-fire"></i> Nowości
-            </a>
-            <a href="#" class="cat-link">
-                <i class="fas fa-compact-disc"></i> Płyty CD
-            </a>
-            <a href="#" class="cat-link">
-                <i class="fas fa-record-vinyl"></i> Winyle
-            </a>
-            <a href="#" class="cat-link">
-                <i class="fas fa-cassette-tape"></i> Kasety
-            </a>
-            <a href="#" class="cat-link">
-                <i class="fas fa-tshirt"></i> Koszulki
-            </a>
-            <a href="#" class="cat-link">
-                <i class="fas fa-hat-cowboy"></i> Czapki
-            </a>
-            <a href="#" class="cat-link">
-                <i class="fas fa-tags"></i> Promocje
-            </a>
+           @php
+    // Pobierz kategorie do menu (możesz przenieść do View Composer dla lepszej wydajności)
+    $navCategories = \App\Models\Category::orderBy('name')->take(12)->get();
+@endphp
+
+<a href="{{ route('home') }}" class="cat-link {{ request()->routeIs('home') ? 'active' : '' }}">
+    <i class="fas fa-fire"></i> Nowości
+</a>
+
+@foreach($navCategories as $navCat)
+    <a href="{{ route('category.show', $navCat->slug) }}" class="cat-link {{ request()->is('kategoria/'.$navCat->slug) ? 'active' : '' }}">
+        {{-- Możesz dodać ikonę per category, tu prosty fallback --}}
+        <i class="fas fa-folder"></i> {{ $navCat->name }}
+    </a>
+@endforeach
         </div>
     </div>
 

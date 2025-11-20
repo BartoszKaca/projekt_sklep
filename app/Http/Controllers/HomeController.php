@@ -9,7 +9,7 @@ class HomeController extends Controller
 {
     public function __construct()
     {
-        // pozwól gościom zobaczyć stronę główną, chronij inne metody
+        // Pozwól gościom zobaczyć stronę główną
         $this->middleware('auth')->except('index');
     }
 

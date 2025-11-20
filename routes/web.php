@@ -5,8 +5,9 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\StockController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
@@ -21,6 +22,9 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 // public route for categories
 Route::get('/kategoria/{slug}', [CategoryController::class, 'show'])->name('category.show');
 
+// public route for product page
+Route::get('/produkt/{slug}', [ProductController::class, 'show'])->name('product.show');
+
 // Authentication routes
 Auth::routes();
 
@@ -30,40 +34,40 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Produkty
-    Route::resource('products', ProductController::class);
-    Route::get('products/{product}/stock', [ProductController::class, 'stock'])->name('products.stock');
-    Route::post('products/{product}/adjust-stock', [ProductController::class, 'adjustStock'])->name('products.adjust-stock');
+    // Produkty (admin)
+    Route::resource('products', AdminProductController::class);
+    Route::get('products/{product}/stock', [AdminProductController::class, 'stock'])->name('products.stock');
+    Route::post('products/{product}/adjust-stock', [AdminProductController::class, 'adjustStock'])->name('products.adjust-stock');
 
     // Kategorie (admin)
     Route::resource('categories', AdminCategoryController::class)->except(['show', 'create', 'edit']);
 
-    // Zamówienia
+    // Zamówienia (admin)
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
     Route::patch('orders/{order}/payment', [OrderController::class, 'updatePaymentStatus'])->name('orders.update-payment');
 
-    // Magazyn
+    // Magazyn (admin)
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
     Route::get('stock/history', [StockController::class, 'history'])->name('stock.history');
     Route::get('stock/export', [StockController::class, 'export'])->name('stock.export');
 
-    // Kupony
+    // Kupony (admin)
     Route::resource('coupons', CouponController::class)->except(['show', 'create', 'edit']);
 
-    // Użytkownicy
+    // Użytkownicy (admin)
     Route::get('users', [UserController::class, 'index'])->name('users.index');
     Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
     Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
 
-    // Opinie
+    // Opinie (admin)
     Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
     Route::post('reviews/{review}/approve', [ReviewController::class, 'approve'])->name('reviews.approve');
     Route::post('reviews/{review}/reject', [ReviewController::class, 'reject'])->name('reviews.reject');
     Route::delete('reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 
-    // Raporty
+    // Raporty (admin)
     Route::get('reports/sales', [ReportController::class, 'sales'])->name('reports.sales');
     Route::get('reports/inventory', [ReportController::class, 'inventory'])->name('reports.inventory');
 });
