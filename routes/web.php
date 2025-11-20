@@ -3,20 +3,23 @@
 // routes/web.php
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\StockController;
-use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\ReportController;
 
 // Public routes
-Route::get('/', function () {
-    return view('home');
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
+
+// public route for categories
+Route::get('/kategoria/{slug}', [CategoryController::class, 'show'])->name('category.show');
 
 // Authentication routes
 Auth::routes();
@@ -33,7 +36,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('products/{product}/adjust-stock', [ProductController::class, 'adjustStock'])->name('products.adjust-stock');
     
     // Kategorie
-    Route::resource('categories', CategoryController::class)->except(['show', 'create', 'edit']);
+    Route::resource('categories', AdminCategoryController::class)->except(['show', 'create', 'edit']);
     
     // Zamówienia
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
@@ -103,14 +106,3 @@ Route::prefix('api')->middleware(['auth', 'admin'])->group(function () {
         ]);
     });
 });
-Auth::routes();
-
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
-
-Auth::routes();
-
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
-
-Auth::routes();
-
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
