@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\CartController;
 
 // Public routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -23,7 +24,12 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/kategoria/{slug}', [CategoryController::class, 'show'])->name('category.show');
 
 // public route for product page
-Route::get('/produkt/{slug}', [ProductController::class, 'show'])->name('product.show');
+Route::get('/produkt/{slug}', [ProductController::class, 'show'])->name('products.show');
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
+Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
+Route::get('/cart/count', [CartController::class, 'count'])->name('cart.count');
 
 // Authentication routes
 Auth::routes();

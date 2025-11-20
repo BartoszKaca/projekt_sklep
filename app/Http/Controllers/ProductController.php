@@ -13,6 +13,6 @@ class ProductController extends Controller
             ->with(['images', 'variants', 'category', 'reviews', 'primaryImage'])
             ->firstOrFail();
 
-        return view('product.show', compact('product'));
+        return view('products.show', compact('product'));
     }
 }

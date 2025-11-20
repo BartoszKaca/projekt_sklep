@@ -14,7 +14,7 @@
     <div class="products-grid">
         @forelse($products as $product)
             <div class="product-card">
-                <a href="{{ route('product.show', $product->slug) }}">
+                <a href="{{ route('products.show', $product->slug) }}">
                     <div class="product-image">
                         @if(optional($product->primaryImage)->path)
                             <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
@@ -26,7 +26,7 @@
 
                 <div class="product-info">
                     <div class="product-category">{{ $category->name }}</div>
-                    <a href="{{ route('product.show', $product->slug) }}">
+                    <a href="{{ route('products.show', $product->slug) }}">
                         <h3 class="product-name">{{ $product->name }}</h3>
                     </a>
                     <div class="product-price">

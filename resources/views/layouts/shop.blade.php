@@ -1,19 +1,20 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Rap Shop') - Twój sklep z rapem</title>
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
+
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         * {
             margin: 0;
@@ -66,7 +67,7 @@
         }
 
         .top-bar-links a {
-            color: rgba(255,255,255,0.8);
+            color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
             transition: color 0.2s;
         }
@@ -78,7 +79,7 @@
         /* Navbar */
         .navbar {
             background: white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -123,7 +124,7 @@
         .nav-search input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
         .nav-search i {
@@ -287,7 +288,7 @@
         }
 
         .footer-section p {
-            color: rgba(255,255,255,0.7);
+            color: rgba(255, 255, 255, 0.7);
             line-height: 1.8;
             margin-bottom: 1rem;
         }
@@ -301,7 +302,7 @@
         }
 
         .footer-links a {
-            color: rgba(255,255,255,0.7);
+            color: rgba(255, 255, 255, 0.7);
             text-decoration: none;
             transition: color 0.2s;
         }
@@ -320,7 +321,7 @@
             width: 44px;
             height: 44px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -343,15 +344,15 @@
         .newsletter-form input {
             flex: 1;
             padding: 0.875rem 1.25rem;
-            border: 2px solid rgba(255,255,255,0.2);
+            border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 50px;
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             color: white;
             font-size: 0.9375rem;
         }
 
         .newsletter-form input::placeholder {
-            color: rgba(255,255,255,0.5);
+            color: rgba(255, 255, 255, 0.5);
         }
 
         .newsletter-form input:focus {
@@ -375,10 +376,10 @@
         }
 
         .footer-bottom {
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
             padding: 1.5rem 2rem;
             text-align: center;
-            color: rgba(255,255,255,0.6);
+            color: rgba(255, 255, 255, 0.6);
             font-size: 0.875rem;
         }
 
@@ -391,7 +392,7 @@
 
         .payment-methods i {
             font-size: 2rem;
-            color: rgba(255,255,255,0.4);
+            color: rgba(255, 255, 255, 0.4);
         }
 
         /* Mobile Menu */
@@ -449,6 +450,7 @@
     </style>
     @stack('styles')
 </head>
+
 <body>
     <!-- Top Bar -->
     <div class="top-bar">
@@ -482,29 +484,38 @@
 
             <div class="nav-actions">
                 @auth
-                    <button class="nav-btn" title="Lista życzeń">
-                        <i class="fas fa-heart"></i>
-                        <span class="badge">{{ auth()->user()->wishlist->count() ?? 0 }}</span>
-                    </button>
+                <button class="nav-btn" title="Lista życzeń">
+                    <i class="fas fa-heart"></i>
+                    <span class="badge">{{ auth()->user()->wishlist->count() ?? 0 }}</span>
+                </button>
                 @endauth
 
                 <button class="nav-btn" onclick="toggleCart()" title="Koszyk">
                     <i class="fas fa-shopping-bag"></i>
-                    <span class="badge" id="cart-count">0</span>
+                    @php
+                    $cartItems = session('cart.items', []);
+                    $cartCount = 0;
+                    foreach ($cartItems as $ci) { $cartCount += ($ci['quantity'] ?? 0); }
+                    @endphp
+
+                    <button class="nav-btn" onclick="toggleCart()" title="Koszyk">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span class="badge" id="cart-count">{{ $cartCount }}</span>
+                    </button>
                 </button>
 
                 @auth
-                    <a href="{{ route('account.dashboard') }}" class="user-menu-btn">
-                        <div class="user-avatar">
-                            {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                        </div>
-                        <span>{{ auth()->user()->name }}</span>
-                    </a>
+                <a href="{{ route('account.dashboard') }}" class="user-menu-btn">
+                    <div class="user-avatar">
+                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                    </div>
+                    <span>{{ auth()->user()->name }}</span>
+                </a>
                 @else
-                    <a href="{{ route('login') }}" class="user-menu-btn">
-                        <i class="fas fa-user"></i>
-                        <span>Zaloguj</span>
-                    </a>
+                <a href="{{ route('login') }}" class="user-menu-btn">
+                    <i class="fas fa-user"></i>
+                    <span>Zaloguj</span>
+                </a>
                 @endauth
             </div>
         </div>
@@ -513,21 +524,21 @@
     <!-- Categories Navigation -->
     <div class="categories-nav">
         <div class="categories-content">
-           @php
-    // Pobierz kategorie do menu (możesz przenieść do View Composer dla lepszej wydajności)
-    $navCategories = \App\Models\Category::orderBy('name')->take(12)->get();
-@endphp
+            @php
+            // Pobierz kategorie do menu (możesz przenieść do View Composer dla lepszej wydajności)
+            $navCategories = \App\Models\Category::orderBy('name')->take(12)->get();
+            @endphp
 
-<a href="{{ route('home') }}" class="cat-link {{ request()->routeIs('home') ? 'active' : '' }}">
-    <i class="fas fa-fire"></i> Nowości
-</a>
+            <a href="{{ route('home') }}" class="cat-link {{ request()->routeIs('home') ? 'active' : '' }}">
+                <i class="fas fa-fire"></i> Nowości
+            </a>
 
-@foreach($navCategories as $navCat)
-    <a href="{{ route('category.show', $navCat->slug) }}" class="cat-link {{ request()->is('kategoria/'.$navCat->slug) ? 'active' : '' }}">
-        {{-- Możesz dodać ikonę per category, tu prosty fallback --}}
-        <i class="fas fa-folder"></i> {{ $navCat->name }}
-    </a>
-@endforeach
+            @foreach($navCategories as $navCat)
+            <a href="{{ route('category.show', $navCat->slug) }}" class="cat-link {{ request()->is('kategoria/'.$navCat->slug) ? 'active' : '' }}">
+                {{-- Możesz dodać ikonę per category, tu prosty fallback --}}
+                <i class="fas fa-folder"></i> {{ $navCat->name }}
+            </a>
+            @endforeach
         </div>
     </div>
 
@@ -545,8 +556,8 @@
                     RAP SHOP
                 </h3>
                 <p>
-                    Twój numer jeden w świecie polskiego hip-hopu. 
-                    Oferujemy największy wybór płyt, vinylu i merchu od 
+                    Twój numer jeden w świecie polskiego hip-hopu.
+                    Oferujemy największy wybór płyt, vinylu i merchu od
                     najpopularniejszych polskich raperów.
                 </p>
                 <div class="social-links">
@@ -625,6 +636,7 @@
     </script>
     @stack('scripts')
 </body>
+
 </html>
 
 <!-- 
