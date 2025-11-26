@@ -16,9 +16,16 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\AccountController;
+use App\Http\Controllers\WishlistController;
 
 // Public routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+// Search and products
+Route::get('/szukaj', [ProductController::class, 'search'])->name('products.search');
+Route::get('/produkty', [ProductController::class, 'index'])->name('products.index');
 
 // public route for categories
 Route::get('/kategoria/{slug}', [CategoryController::class, 'show'])->name('category.show');
@@ -30,6 +37,11 @@ Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
 Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
 Route::get('/cart/count', [CartController::class, 'count'])->name('cart.count');
+
+// Checkout routes (allow guest checkout)
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+Route::get('/checkout/success/{orderNumber}', [CheckoutController::class, 'success'])->name('checkout.success');
 
 // Authentication routes
 Auth::routes();
@@ -80,19 +92,21 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
 // Customer routes - wymagają tylko autoryzacji
 Route::middleware(['auth'])->group(function () {
-    Route::get('/account', function () {
-        return view('account.dashboard');
-    })->name('account.dashboard');
+    // Account
+    Route::get('/account', [AccountController::class, 'dashboard'])->name('account.dashboard');
+    Route::get('/account/edit', [AccountController::class, 'edit'])->name('account.edit');
+    Route::put('/account', [AccountController::class, 'update'])->name('account.update');
+    Route::get('/account/password', [AccountController::class, 'passwordForm'])->name('account.password');
+    Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
+    
+    // Orders
+    Route::get('/orders', [AccountController::class, 'orders'])->name('account.orders');
+    Route::get('/orders/{order}', [AccountController::class, 'orderShow'])->name('account.orders.show');
 
-    Route::get('/orders', function () {
-        $orders = auth()->user()->orders()->latest()->paginate(10);
-        return view('account.orders', compact('orders'));
-    })->name('account.orders');
-
-    Route::get('/wishlist', function () {
-        $wishlist = auth()->user()->wishlist()->with('product')->get();
-        return view('account.wishlist', compact('wishlist'));
-    })->name('account.wishlist');
+    // Wishlist
+    Route::get('/wishlist', [WishlistController::class, 'index'])->name('account.wishlist');
+    Route::post('/wishlist/toggle', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
+    Route::delete('/wishlist/{id}', [WishlistController::class, 'remove'])->name('wishlist.remove');
 });
 
 // API routes dla AJAX requests (niezmienione)
