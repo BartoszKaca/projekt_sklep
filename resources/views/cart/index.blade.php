@@ -34,7 +34,7 @@
                         </div>
 
                         <div style="flex:1;">
-                            <a href="{{ route('product.show', $it['slug'] ?? $it['product_id']) }}"><strong>{{ $it['name'] }}</strong></a>
+                            <a href="{{ route('products.show', $it['slug'] ?? $it['product_id']) }}"><strong>{{ $it['name'] }}</strong></a>
                             <div style="margin-top:0.25rem;">
                                 Cena: {{ number_format($it['price'],2) }} zł
                             </div>

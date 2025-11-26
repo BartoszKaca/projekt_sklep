@@ -525,7 +525,7 @@
                 <span class="product-badge new">Nowość</span>
                 @endif
 
-                <div class="product-image">
+                <a href="{{ route('products.show', $product->slug) }}" class="product-image">
                     @if($product->primaryImage)
                     <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
                     @else
@@ -533,16 +533,16 @@
                     @endif
 
                     <div class="product-actions">
-                        <button class="product-action-btn" onclick="addToCart('{{ $product->id }}')">
+                        <button class="product-action-btn" onclick="event.preventDefault(); addToCart('{{ $product->id }}')">
                             <i class="fas fa-shopping-bag"></i> Dodaj
                         </button>
-                        <button class="product-action-btn icon-only" onclick="toggleWishlist('{{ $product->id }}')">
+                        <button class="product-action-btn icon-only" onclick="event.preventDefault(); toggleWishlist('{{ $product->id }}')">
                             <i class="far fa-heart"></i>
                         </button>
                     </div>
-                </div>
+                </a>
 
-                <div class="product-info">
+                <a href="{{ route('products.show', $product->slug) }}" class="product-info" style="text-decoration: none; color: inherit;">
                     <div class="product-category">{{ $product->category->name }}</div>
                     <h3 class="product-name">{{ $product->name }}</h3>
                     @if($product->artist)
@@ -564,7 +564,7 @@
                         </div>
                         <span class="rating-count">({{ $product->reviews->count() }})</span>
                     </div>
-                </div>
+                </a>
             </div>
             @empty
             <div style="grid-column: 1/-1; text-align: center; padding: 4rem; color: var(--gray);">
@@ -648,19 +648,23 @@
             <div class="product-card">
                 <span class="product-badge new">Nowość</span>
 
-                <div class="product-image">
+                <a href="{{ route('products.show', $product->slug) }}" class="product-image">
+                    @if($product->primaryImage)
+                    <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
+                    @else
                     <i class="fas fa-compact-disc"></i>
+                    @endif
                     <div class="product-actions">
-                        <button class="product-action-btn">
+                        <button class="product-action-btn" onclick="event.preventDefault(); addToCart('{{ $product->id }}')">
                             <i class="fas fa-shopping-bag"></i> Dodaj
                         </button>
-                        <button class="product-action-btn icon-only">
+                        <button class="product-action-btn icon-only" onclick="event.preventDefault(); toggleWishlist('{{ $product->id }}')">
                             <i class="far fa-heart"></i>
                         </button>
                     </div>
-                </div>
+                </a>
 
-                <div class="product-info">
+                <a href="{{ route('products.show', $product->slug) }}" class="product-info" style="text-decoration: none; color: inherit;">
                     <div class="product-category">{{ $product->category->name }}</div>
                     <h3 class="product-name">{{ $product->name }}</h3>
                     @if($product->artist)
@@ -668,9 +672,9 @@
                     @endif
 
                     <div class="product-price">
-                        <span class="price-current">{{ number_format($product->price, 2) }} zł</span>
+                        <span class="price-current">{{ number_format($product->getFinalPrice(), 2) }} zł</span>
                     </div>
-                </div>
+                </a>
             </div>
             @endforeach
         </div>
@@ -680,14 +684,65 @@
 @push('scripts')
 <script>
     function addToCart(productId) {
-        console.log('Add to cart:', productId);
-        // Implementacja dodawania do koszyka
-        alert('Produkt dodany do koszyka!');
+        fetch('/cart/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                product_id: productId,
+                quantity: 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Dodano do koszyka');
+                // Update cart count in header
+                const cartBadge = document.querySelector('.cart-count');
+                if (cartBadge) {
+                    cartBadge.textContent = data.cartCount;
+                }
+                location.reload();
+            } else {
+                alert(data.message || 'Błąd podczas dodawania do koszyka');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Błąd podczas dodawania do koszyka');
+        });
     }
 
     function toggleWishlist(productId) {
-        console.log('Toggle wishlist:', productId);
-        // Implementacja listy życzeń
+        @auth
+        fetch('/wishlist/toggle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                product_id: productId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message || 'Błąd');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Błąd');
+        });
+        @else
+        window.location.href = '/login';
+        @endauth
     }
 </script>
 @endpush
