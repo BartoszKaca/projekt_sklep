@@ -352,7 +352,7 @@
                     <div class="stat-icon">
                         <i class="fas fa-shopping-bag"></i>
                     </div>
-                    <div class="stat-value">{{ $recentOrders->count() }}</div>
+                    <div class="stat-value">{{ $recentOrdersCount }}</div>
                     <div class="stat-label">Ostatnie zamówienia</div>
                 </div>
                 

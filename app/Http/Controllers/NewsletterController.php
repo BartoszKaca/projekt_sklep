@@ -6,6 +6,7 @@ use App\Mail\NewsletterSubscriptionMail;
 use App\Models\NewsletterSubscriber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -46,7 +47,7 @@ class NewsletterController extends Controller
             try {
                 Mail::to($email)->send(new NewsletterSubscriptionMail($email));
             } catch (\Exception $e) {
-                \Log::error('Failed to send newsletter confirmation: ' . $e->getMessage());
+                Log::error('Failed to send newsletter confirmation: ' . $e->getMessage());
             }
         }
 

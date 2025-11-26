@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -181,7 +182,7 @@ class CheckoutTest extends TestCase
         ]);
 
         // Get order from database
-        $order = \App\Models\Order::latest()->first();
+        $order = Order::latest()->first();
         
         // Access success page
         $successResponse = $this->get(route('checkout.success', ['order' => $order->id]));

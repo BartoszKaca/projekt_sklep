@@ -13,6 +13,7 @@ use App\Models\ProductVariant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
@@ -227,7 +228,7 @@ class CheckoutController extends Controller
                 Mail::to($request->email)->send(new OrderConfirmationMail($order));
             } catch (\Exception $e) {
                 // Log email error but don't fail the order
-                \Log::error('Failed to send order confirmation email: ' . $e->getMessage());
+                Log::error('Failed to send order confirmation email: ' . $e->getMessage());
             }
 
             // Redirect based on payment method
@@ -239,7 +240,7 @@ class CheckoutController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Checkout error: ' . $e->getMessage());
+            Log::error('Checkout error: ' . $e->getMessage());
             
             return redirect()->back()
                 ->withInput()

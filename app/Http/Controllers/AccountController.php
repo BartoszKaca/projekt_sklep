@@ -33,10 +33,11 @@ class AccountController extends Controller
     {
         $user = auth()->user();
         $recentOrders = $user->orders()->latest()->take(5)->get();
+        $recentOrdersCount = $recentOrders->count();
         $wishlistCount = $user->wishlist()->count();
         $addressCount = $user->addresses()->count();
         
-        return view('account.dashboard', compact('user', 'recentOrders', 'wishlistCount', 'addressCount'));
+        return view('account.dashboard', compact('user', 'recentOrders', 'recentOrdersCount', 'wishlistCount', 'addressCount'));
     }
 
     /**

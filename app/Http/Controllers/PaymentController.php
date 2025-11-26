@@ -15,6 +15,28 @@ use Illuminate\View\View;
 class PaymentController extends Controller
 {
     /**
+     * Configure PayU SDK with credentials.
+     */
+    private function configurePayU(): void
+    {
+        \OpenPayU_Configuration::setEnvironment(config('payu.environment', 'sandbox'));
+        \OpenPayU_Configuration::setMerchantPosId(config('payu.pos_id'));
+        \OpenPayU_Configuration::setSignatureKey(config('payu.signature_key'));
+        \OpenPayU_Configuration::setOauthClientId(config('payu.client_id'));
+        \OpenPayU_Configuration::setOauthClientSecret(config('payu.client_secret'));
+    }
+
+    /**
+     * Configure PayU SDK with minimal credentials for notifications.
+     */
+    private function configurePayUForNotifications(): void
+    {
+        \OpenPayU_Configuration::setEnvironment(config('payu.environment', 'sandbox'));
+        \OpenPayU_Configuration::setMerchantPosId(config('payu.pos_id'));
+        \OpenPayU_Configuration::setSignatureKey(config('payu.signature_key'));
+    }
+
+    /**
      * Initialize PayU payment.
      */
     public function process(Order $order): RedirectResponse|View
@@ -43,11 +65,7 @@ class PaymentController extends Controller
 
         try {
             // Initialize PayU SDK
-            \OpenPayU_Configuration::setEnvironment(config('payu.environment', 'sandbox'));
-            \OpenPayU_Configuration::setMerchantPosId(config('payu.pos_id'));
-            \OpenPayU_Configuration::setSignatureKey(config('payu.signature_key'));
-            \OpenPayU_Configuration::setOauthClientId(config('payu.client_id'));
-            \OpenPayU_Configuration::setOauthClientSecret(config('payu.client_secret'));
+            $this->configurePayU();
 
             // Prepare order data
             $orderData = [
@@ -117,9 +135,7 @@ class PaymentController extends Controller
     {
         try {
             // Initialize PayU SDK
-            \OpenPayU_Configuration::setEnvironment(config('payu.environment', 'sandbox'));
-            \OpenPayU_Configuration::setMerchantPosId(config('payu.pos_id'));
-            \OpenPayU_Configuration::setSignatureKey(config('payu.signature_key'));
+            $this->configurePayUForNotifications();
 
             $body = file_get_contents('php://input');
             $result = \OpenPayU_Order::consumeNotification($body);

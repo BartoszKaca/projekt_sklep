@@ -246,42 +246,43 @@ DELIMITER ;
 -- ============================================================
 
 -- Note: Some indexes may already exist. Errors will be ignored.
+-- Run each CREATE INDEX separately and ignore errors if index exists.
 
 -- Products indexes for better search and filtering performance
-CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
-CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);
-CREATE INDEX IF NOT EXISTS idx_products_featured ON products(is_featured);
-CREATE INDEX IF NOT EXISTS idx_products_price ON products(price);
-CREATE INDEX IF NOT EXISTS idx_products_type ON products(type);
-CREATE INDEX IF NOT EXISTS idx_products_slug ON products(slug);
+-- CREATE INDEX idx_products_category ON products(category_id);
+-- CREATE INDEX idx_products_active ON products(is_active);
+-- CREATE INDEX idx_products_featured ON products(is_featured);
+-- CREATE INDEX idx_products_price ON products(price);
+-- CREATE INDEX idx_products_type ON products(type);
+-- CREATE INDEX idx_products_slug ON products(slug);
 
 -- Orders indexes
-CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
-CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
-CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON orders(payment_status);
-CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
-CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);
+-- CREATE INDEX idx_orders_user ON orders(user_id);
+-- CREATE INDEX idx_orders_status ON orders(status);
+-- CREATE INDEX idx_orders_payment_status ON orders(payment_status);
+-- CREATE INDEX idx_orders_created_at ON orders(created_at);
+-- CREATE INDEX idx_orders_order_number ON orders(order_number);
 
 -- Order items indexes
-CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
-CREATE INDEX IF NOT EXISTS idx_order_items_product ON order_items(product_id);
+-- CREATE INDEX idx_order_items_order ON order_items(order_id);
+-- CREATE INDEX idx_order_items_product ON order_items(product_id);
 
 -- Users indexes
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+-- CREATE INDEX idx_users_email ON users(email);
+-- CREATE INDEX idx_users_role ON users(role);
 
 -- Categories indexes
-CREATE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug);
-CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(is_active);
+-- CREATE INDEX idx_categories_slug ON categories(slug);
+-- CREATE INDEX idx_categories_active ON categories(is_active);
 
 -- Stock movements indexes
-CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements(product_id);
-CREATE INDEX IF NOT EXISTS idx_stock_movements_type ON stock_movements(type);
+-- CREATE INDEX idx_stock_movements_product ON stock_movements(product_id);
+-- CREATE INDEX idx_stock_movements_type ON stock_movements(type);
 
 -- Wishlist indexes
-CREATE INDEX IF NOT EXISTS idx_wishlist_user ON wishlists(user_id);
-CREATE INDEX IF NOT EXISTS idx_wishlist_product ON wishlists(product_id);
+-- CREATE INDEX idx_wishlist_user ON wishlists(user_id);
+-- CREATE INDEX idx_wishlist_product ON wishlists(product_id);
 
 -- Newsletter subscribers indexes
-CREATE INDEX IF NOT EXISTS idx_newsletter_email ON newsletter_subscribers(email);
-CREATE INDEX IF NOT EXISTS idx_newsletter_active ON newsletter_subscribers(is_active);
+-- CREATE INDEX idx_newsletter_email ON newsletter_subscribers(email);
+-- CREATE INDEX idx_newsletter_active ON newsletter_subscribers(is_active);
