@@ -34,7 +34,7 @@
                         </div>
 
                         <div style="flex:1;">
-                            <a href="{{ route('product.show', $it['slug'] ?? $it['product_id']) }}"><strong>{{ $it['name'] }}</strong></a>
+                            <a href="{{ route('products.show', $it['slug'] ?? $it['product_id']) }}"><strong>{{ $it['name'] }}</strong></a>
                             <div style="margin-top:0.25rem;">
                                 Cena: {{ number_format($it['price'],2) }} zł
                             </div>
@@ -59,7 +59,7 @@
                     <div style="font-weight:800;">{{ number_format($cart['total'] ?? 0, 2) }} zł</div>
                 </div>
                 <div style="margin-top:1rem;">
-                    <a href="#" class="btn btn-primary" style="width:100%;">Przejdź do płatności</a>
+                    <a href="{{ route('checkout.index') }}" class="btn btn-primary" style="width:100%;">Przejdź do płatności</a>
                 </div>
             </aside>
         </div>

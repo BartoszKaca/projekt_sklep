@@ -282,6 +282,21 @@
         color: var(--dark);
     }
 
+    .product-name a {
+        color: var(--dark);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .product-name a:hover {
+        color: var(--primary);
+    }
+
+    .product-image-link {
+        display: block;
+        text-decoration: none;
+    }
+
     .product-artist {
         font-size: 0.875rem;
         color: var(--gray);
@@ -525,26 +540,30 @@
                 <span class="product-badge new">Nowość</span>
                 @endif
 
-                <div class="product-image">
-                    @if($product->primaryImage)
-                    <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
-                    @else
-                    <i class="fas fa-compact-disc"></i>
-                    @endif
+                <a href="{{ route('products.show', $product->slug) }}" class="product-image-link">
+                    <div class="product-image">
+                        @if($product->primaryImage)
+                        <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
+                        @else
+                        <i class="fas fa-compact-disc"></i>
+                        @endif
 
-                    <div class="product-actions">
-                        <button class="product-action-btn" onclick="addToCart('{{ $product->id }}')">
-                            <i class="fas fa-shopping-bag"></i> Dodaj
-                        </button>
-                        <button class="product-action-btn icon-only" onclick="toggleWishlist('{{ $product->id }}')">
-                            <i class="far fa-heart"></i>
-                        </button>
+                        <div class="product-actions">
+                            <button class="product-action-btn" onclick="event.preventDefault(); event.stopPropagation(); addToCart('{{ $product->id }}')">
+                                <i class="fas fa-shopping-bag"></i> Dodaj
+                            </button>
+                            <button class="product-action-btn icon-only" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist('{{ $product->id }}')">
+                                <i class="far fa-heart"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
+                </a>
 
                 <div class="product-info">
                     <div class="product-category">{{ $product->category->name }}</div>
-                    <h3 class="product-name">{{ $product->name }}</h3>
+                    <h3 class="product-name">
+                        <a href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a>
+                    </h3>
                     @if($product->artist)
                     <div class="product-artist">{{ $product->artist }}</div>
                     @endif
@@ -648,27 +667,38 @@
             <div class="product-card">
                 <span class="product-badge new">Nowość</span>
 
-                <div class="product-image">
-                    <i class="fas fa-compact-disc"></i>
-                    <div class="product-actions">
-                        <button class="product-action-btn">
-                            <i class="fas fa-shopping-bag"></i> Dodaj
-                        </button>
-                        <button class="product-action-btn icon-only">
-                            <i class="far fa-heart"></i>
-                        </button>
+                <a href="{{ route('products.show', $product->slug) }}" class="product-image-link">
+                    <div class="product-image">
+                        @if($product->primaryImage)
+                        <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
+                        @else
+                        <i class="fas fa-compact-disc"></i>
+                        @endif
+                        <div class="product-actions">
+                            <button class="product-action-btn" onclick="event.preventDefault(); event.stopPropagation(); addToCart('{{ $product->id }}')">
+                                <i class="fas fa-shopping-bag"></i> Dodaj
+                            </button>
+                            <button class="product-action-btn icon-only" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist('{{ $product->id }}')">
+                                <i class="far fa-heart"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
+                </a>
 
                 <div class="product-info">
                     <div class="product-category">{{ $product->category->name }}</div>
-                    <h3 class="product-name">{{ $product->name }}</h3>
+                    <h3 class="product-name">
+                        <a href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a>
+                    </h3>
                     @if($product->artist)
                     <div class="product-artist">{{ $product->artist }}</div>
                     @endif
 
                     <div class="product-price">
-                        <span class="price-current">{{ number_format($product->price, 2) }} zł</span>
+                        <span class="price-current">{{ number_format($product->getFinalPrice(), 2) }} zł</span>
+                        @if($product->discount_price)
+                        <span class="price-old">{{ number_format($product->price, 2) }} zł</span>
+                        @endif
                     </div>
                 </div>
             </div>
