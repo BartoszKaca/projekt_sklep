@@ -29,6 +29,7 @@ class AccountController extends Controller
     /**
      * Display the user dashboard.
      */
+
     
     public function dashboard(): View
     {
