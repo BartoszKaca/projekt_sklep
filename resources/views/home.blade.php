@@ -48,7 +48,7 @@
 
     .hero-text p {
         font-size: 1.25rem;
-        color: rgba(255,255,255,0.8);
+        color: rgba(255, 255, 255, 0.8);
         margin-bottom: 2rem;
         line-height: 1.6;
     }
@@ -80,17 +80,17 @@
 
     .btn-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 12px 24px rgba(99,102,241,0.3);
+        box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
     }
 
     .btn-secondary {
-        background: rgba(255,255,255,0.1);
+        background: rgba(255, 255, 255, 0.1);
         color: white;
-        border: 2px solid rgba(255,255,255,0.3);
+        border: 2px solid rgba(255, 255, 255, 0.3);
     }
 
     .btn-secondary:hover {
-        background: rgba(255,255,255,0.2);
+        background: rgba(255, 255, 255, 0.2);
     }
 
     .hero-image {
@@ -100,7 +100,7 @@
     }
 
     .hero-card {
-        background: rgba(255,255,255,0.1);
+        background: rgba(255, 255, 255, 0.1);
         backdrop-filter: blur(10px);
         border-radius: 16px;
         padding: 1.5rem;
@@ -110,7 +110,7 @@
 
     .hero-card:hover {
         transform: translateY(-8px);
-        background: rgba(255,255,255,0.15);
+        background: rgba(255, 255, 255, 0.15);
     }
 
     .hero-card i {
@@ -127,7 +127,7 @@
     }
 
     .hero-card p {
-        color: rgba(255,255,255,0.7);
+        color: rgba(255, 255, 255, 0.7);
         font-size: 0.875rem;
     }
 
@@ -170,7 +170,7 @@
 
     .product-card:hover {
         transform: translateY(-8px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
     }
 
     .product-badge {
@@ -230,7 +230,7 @@
         display: flex;
         gap: 0.5rem;
         padding: 1rem;
-        background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
         opacity: 0;
         transform: translateY(20px);
         transition: all 0.3s;
@@ -280,6 +280,21 @@
         font-weight: 700;
         margin-bottom: 0.5rem;
         color: var(--dark);
+    }
+
+    .product-name a {
+        color: var(--dark);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .product-name a:hover {
+        color: var(--primary);
+    }
+
+    .product-image-link {
+        display: block;
+        text-decoration: none;
     }
 
     .product-artist {
@@ -355,13 +370,13 @@
         width: 300px;
         height: 300px;
         border-radius: 50%;
-        background: rgba(255,255,255,0.1);
+        background: rgba(255, 255, 255, 0.1);
         transform: translate(-50%, -50%);
     }
 
     .category-card:hover {
         transform: translateY(-8px);
-        box-shadow: 0 12px 24px rgba(99,102,241,0.3);
+        box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
     }
 
     .category-card i {
@@ -407,7 +422,7 @@
         width: 500px;
         height: 500px;
         border-radius: 50%;
-        background: rgba(255,255,255,0.1);
+        background: rgba(255, 255, 255, 0.1);
     }
 
     .promo-content {
@@ -469,7 +484,7 @@
                     <span class="highlight">polskiego rapu</span>
                 </h1>
                 <p>
-                    Największy wybór płyt, vinylu i limitowanych edycji. 
+                    Największy wybór płyt, vinylu i limitowanych edycji.
                     Wspieraj swoich ulubionych artystów i zbuduj swoją kolekcję!
                 </p>
                 <div class="hero-buttons">
@@ -525,26 +540,31 @@
                 <span class="product-badge new">Nowość</span>
                 @endif
 
-                <div class="product-image">
-                    @if($product->primaryImage)
-                    <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
-                    @else
-                    <i class="fas fa-compact-disc"></i>
-                    @endif
+                <a href="{{ route('products.show', $product->slug) }}" class="product-image-link">
+                    <div class="product-image">
+                        @if($product->primaryImage)
+                        <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
+                        @else
+                        <i class="fas fa-compact-disc"></i>
+                        @endif
 
-                    <div class="product-actions">
-                        <button class="product-action-btn" onclick="addToCart('{{ $product->id }}')">
-                            <i class="fas fa-shopping-bag"></i> Dodaj
-                        </button>
-                        <button class="product-action-btn icon-only" onclick="toggleWishlist('{{ $product->id }}')">
-                            <i class="far fa-heart"></i>
-                        </button>
+
+                        <div class="product-actions">
+                            <button class="product-action-btn" onclick="event.preventDefault(); event.stopPropagation(); addToCart('{{ $product->id }}')">
+                                <i class="fas fa-shopping-bag"></i> Dodaj
+                            </button>
+                            <button class="product-action-btn icon-only" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist('{{ $product->id }}')">
+                                <i class="far fa-heart"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
+                </a>
 
                 <div class="product-info">
                     <div class="product-category">{{ $product->category->name }}</div>
-                    <h3 class="product-name">{{ $product->name }}</h3>
+                    <h3 class="product-name">
+                        <a href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a>
+                    </h3>
                     @if($product->artist)
                     <div class="product-artist">{{ $product->artist }}</div>
                     @endif
@@ -559,8 +579,8 @@
                     <div class="product-rating">
                         <div class="stars">
                             @for($i = 1; $i <= 5; $i++)
-                            <i class="fas fa-star"></i>
-                            @endfor
+                                <i class="fas fa-star"></i>
+                                @endfor
                         </div>
                         <span class="rating-count">({{ $product->reviews->count() }})</span>
                     </div>
@@ -648,27 +668,38 @@
             <div class="product-card">
                 <span class="product-badge new">Nowość</span>
 
-                <div class="product-image">
-                    <i class="fas fa-compact-disc"></i>
-                    <div class="product-actions">
-                        <button class="product-action-btn">
-                            <i class="fas fa-shopping-bag"></i> Dodaj
-                        </button>
-                        <button class="product-action-btn icon-only">
-                            <i class="far fa-heart"></i>
-                        </button>
+                <a href="{{ route('products.show', $product->slug) }}" class="product-image-link">
+                    <div class="product-image">
+                        @if($product->primaryImage)
+                        <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
+                        @else
+                        <i class="fas fa-compact-disc"></i>
+                        @endif
+                        <div class="product-actions">
+                            <button class="product-action-btn" onclick="event.preventDefault(); event.stopPropagation(); addToCart('{{ $product->id }}')">
+                                <i class="fas fa-shopping-bag"></i> Dodaj
+                            </button>
+                            <button class="product-action-btn icon-only" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist('{{ $product->id }}')">
+                                <i class="far fa-heart"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
+                </a>
 
                 <div class="product-info">
                     <div class="product-category">{{ $product->category->name }}</div>
-                    <h3 class="product-name">{{ $product->name }}</h3>
+                    <h3 class="product-name">
+                        <a href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a>
+                    </h3>
                     @if($product->artist)
                     <div class="product-artist">{{ $product->artist }}</div>
                     @endif
 
                     <div class="product-price">
-                        <span class="price-current">{{ number_format($product->price, 2) }} zł</span>
+                        <span class="price-current">{{ number_format($product->getFinalPrice(), 2) }} zł</span>
+                        @if($product->discount_price)
+                        <span class="price-old">{{ number_format($product->price, 2) }} zł</span>
+                        @endif
                     </div>
                 </div>
             </div>

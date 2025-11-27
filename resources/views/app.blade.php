@@ -1,42 +1,95 @@
 <!doctype html>
-<html lang="pl">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>@yield('title', 'Sklep')</title>
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <title>{{ config('app.name', 'Laravel') }}</title>
+
+    <!-- Fonts -->
+    <link rel="dns-prefetch" href="//fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f8fafc;
+        }
+        .card {
+            border-radius: 0.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <nav>
-            <a href="{{ route('home') }}">Home</a> |
-            <a href="{{ route('cart.index') }}">Koszyk ({{ session('cart_count', 0) }})</a> |
-            @auth
-                <a href="{{ route('account.dashboard') }}">Konto</a> |
-                <form action="{{ route('logout') }}" method="POST" style="display:inline;">
-                    @csrf
-                    <button type="submit">Wyloguj</button>
-                </form>
-            @else
-                <a href="{{ route('login') }}">Zaloguj</a> |
-                <a href="{{ route('register') }}">Rejestracja</a>
-            @endauth
+    <div id="app">
+        <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm">
+            <div class="container">
+                <a class="navbar-brand" href="{{ url('/') }}">
+                    {{ config('app.name', 'Laravel') }}
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <!-- Left Side Of Navbar -->
+                    <ul class="navbar-nav me-auto">
+
+                    </ul>
+
+                    <!-- Right Side Of Navbar -->
+                    <ul class="navbar-nav ms-auto">
+                        <!-- Authentication Links -->
+                        @guest
+                            @if (Route::has('login'))
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('login') }}">{{ __('Login') }}</a>
+                                </li>
+                            @endif
+
+                            @if (Route::has('register'))
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('register') }}">{{ __('Register') }}</a>
+                                </li>
+                            @endif
+                        @else
+                            <li class="nav-item dropdown">
+                                <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
+                                    {{ Auth::user()->name }}
+                                </a>
+
+                                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                    <a class="dropdown-item" href="{{ route('logout') }}"
+                                       onclick="event.preventDefault();
+                                                     document.getElementById('logout-form').submit();">
+                                        {{ __('Logout') }}
+                                    </a>
+
+                                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                                        @csrf
+                                    </form>
+                                </div>
+                            </li>
+                        @endguest
+                    </ul>
+                </div>
+            </div>
         </nav>
-    </header>
 
-    <main>
-        @if(session('success'))
-            <div style="color:green;">{{ session('success') }}</div>
-        @endif
-        @if(session('error'))
-            <div style="color:red;">{{ session('error') }}</div>
-        @endif
-
-        @yield('content')
-    </main>
-
-    <footer>
-        <p>&copy; {{ date('Y') }} Sklep</p>
-    </footer>
+        <main class="py-4">
+            @yield('content')
+        </main>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
