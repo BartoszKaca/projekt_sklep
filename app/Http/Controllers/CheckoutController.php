@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -134,6 +135,28 @@ class CheckoutController extends Controller
 
         try {
             DB::beginTransaction();
+
+            // Validate stock availability before processing
+            foreach ($cart['items'] as $item) {
+                $product = Product::lockForUpdate()->find($item['product_id']);
+                if (!$product) {
+                    throw new \Exception("Produkt {$item['name']} nie jest już dostępny.");
+                }
+
+                if ($item['variant_id']) {
+                    $variant = ProductVariant::lockForUpdate()->find($item['variant_id']);
+                    if (!$variant) {
+                        throw new \Exception("Wariant produktu {$item['name']} nie jest już dostępny.");
+                    }
+                    if ($variant->stock !== null && $variant->stock < $item['quantity']) {
+                        throw new \Exception("Produkt {$item['name']} ma tylko {$variant->stock} sztuk w magazynie.");
+                    }
+                } else {
+                    if ($product->stock_quantity !== null && $product->stock_quantity < $item['quantity']) {
+                        throw new \Exception("Produkt {$item['name']} ma tylko {$product->stock_quantity} sztuk w magazynie.");
+                    }
+                }
+            }
 
             // Calculate totals
             $subtotal = $cart['total'];

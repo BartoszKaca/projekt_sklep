@@ -12,8 +12,13 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-        'admin' => \App\Http\Middleware\AdminMiddleware::class,
-        'guest.checkout' => \App\Http\Middleware\GuestCheckoutMiddleware::class,
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'guest.checkout' => \App\Http\Middleware\GuestCheckoutMiddleware::class,
+        ]);
+        
+        // Exclude PayU webhook from CSRF protection
+        $middleware->validateCsrfTokens(except: [
+            'payment/notify',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -490,19 +490,18 @@
                 </button>
                 @endauth
 
-                <button class="nav-btn" onclick="toggleCart()" title="Koszyk">
-                    <i class="fas fa-shopping-bag"></i>
-                    @php
+                @php
                     $cartItems = session('cart.items', []);
                     $cartCount = 0;
-                    foreach ($cartItems as $ci) { $cartCount += ($ci['quantity'] ?? 0); }
-                    @endphp
+                    foreach ($cartItems as $ci) { 
+                        $cartCount += ($ci['quantity'] ?? 0); 
+                    }
+                @endphp
 
-                    <button class="nav-btn" onclick="toggleCart()" title="Koszyk">
-                        <i class="fas fa-shopping-bag"></i>
-                        <span class="badge" id="cart-count">{{ $cartCount }}</span>
-                    </button>
-                </button>
+                <a href="{{ route('cart.index') }}" class="nav-btn" title="Koszyk">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span class="badge" id="cart-count">{{ $cartCount }}</span>
+                </a>
 
                 @auth
                 <a href="{{ route('account.dashboard') }}" class="user-menu-btn">
@@ -624,11 +623,6 @@
     </footer>
 
     <script>
-        function toggleCart() {
-            // Implementacja koszyka
-            console.log('Toggle cart');
-        }
-
         function toggleMobileMenu() {
             // Implementacja mobile menu
             console.log('Toggle mobile menu');

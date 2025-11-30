@@ -59,7 +59,7 @@
                     <div style="font-weight:800;">{{ number_format($cart['total'] ?? 0, 2) }} zł</div>
                 </div>
                 <div style="margin-top:1rem;">
-                    <a href="#" class="btn btn-primary" style="width:100%;">Przejdź do płatności</a>
+                    <a href="{{ route('checkout.index') }}" class="btn btn-primary" style="width:100%;">Przejdź do płatności</a>
                 </div>
             </aside>
         </div>
