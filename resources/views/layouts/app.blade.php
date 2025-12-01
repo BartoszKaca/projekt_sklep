@@ -15,6 +15,9 @@
 
     <!-- Scripts -->
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+    
+    <!-- View-specific styles pushed from child views -->
+    @stack('styles')
 </head>
 <body>
     <div id="app">
