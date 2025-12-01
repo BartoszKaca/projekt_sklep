@@ -3,10 +3,11 @@
 <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 @endpush
 @section('content')
-<div class="container">
+<div class="auth-page">
+    <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card">
+            <div class="card auth-card">
                 <div class="card-header">{{ __('Register') }}</div>
 
                 <div class="card-body">
@@ -70,6 +71,13 @@
                                 </button>
                             </div>
                         </div>
+                        <div class="row mb-0 mt-3">
+                            <div class="col-md-8 offset-md-4">
+                                <a class="btn btn-link" href="{{ route('login') }}">
+                                    {{ __('Already have an account? Login') }}
+                                </a>
+                            </div>
+
                     </form>
                 </div>
             </div>
