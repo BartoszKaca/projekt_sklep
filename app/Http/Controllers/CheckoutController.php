@@ -18,24 +18,17 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
-/**
- * Controller for checkout process.
- * Handles both guest and authenticated user checkout.
- */
+
 class CheckoutController extends Controller
 {
-    /**
-     * Shipping costs for different methods.
-     */
+
     protected array $shippingCosts = [
         'standard' => 12.99,
         'express' => 24.99,
         'pickup' => 0.00,
     ];
 
-    /**
-     * Display the checkout page.
-     */
+
     public function index(): View|RedirectResponse
     {
         $cart = session('cart', ['items' => [], 'total' => 0]);
@@ -82,9 +75,7 @@ class CheckoutController extends Controller
         ));
     }
 
-    /**
-     * Apply a coupon code.
-     */
+
     public function applyCoupon(Request $request): RedirectResponse
     {
         $request->validate([
@@ -110,9 +101,7 @@ class CheckoutController extends Controller
             ->with('success', 'Kupon został zastosowany.');
     }
 
-    /**
-     * Remove applied coupon.
-     */
+
     public function removeCoupon(): RedirectResponse
     {
         session()->forget('applied_coupon');
@@ -121,9 +110,7 @@ class CheckoutController extends Controller
             ->with('success', 'Kupon został usunięty.');
     }
 
-    /**
-     * Process the checkout and create order.
-     */
+
     public function processOrder(CheckoutRequest $request): RedirectResponse
     {
         $cart = session('cart', ['items' => [], 'total' => 0]);
@@ -271,9 +258,7 @@ class CheckoutController extends Controller
         }
     }
 
-    /**
-     * Show order success page.
-     */
+
     public function success(Order $order): View|RedirectResponse
     {
         // Verify order belongs to current user (if logged in) or is accessible

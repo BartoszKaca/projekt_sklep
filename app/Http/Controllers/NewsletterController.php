@@ -10,14 +10,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 
-/**
- * Controller for newsletter subscriptions.
- */
+
 class NewsletterController extends Controller
 {
-    /**
-     * Subscribe to newsletter.
-     */
+
     public function subscribe(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $request->validate([
@@ -26,14 +22,13 @@ class NewsletterController extends Controller
 
         $email = $request->email;
 
-        // Check if already subscribed
+
         $existing = NewsletterSubscriber::where('email', $email)->first();
 
         if ($existing) {
             if ($existing->is_active) {
                 $message = 'Ten adres email jest już zapisany do newslettera.';
             } else {
-                // Reactivate subscription
                 $existing->update(['is_active' => true]);
                 $message = 'Twoja subskrypcja została reaktywowana.';
             }
@@ -44,7 +39,7 @@ class NewsletterController extends Controller
             ]);
             $message = 'Dziękujemy za zapisanie do newslettera!';
 
-            // Send confirmation email
+
             try {
                 Mail::to($email)->send(new NewsletterSubscriptionMail($email));
             } catch (\Exception $e) {
@@ -62,9 +57,7 @@ class NewsletterController extends Controller
         return redirect()->back()->with('success', $message);
     }
 
-    /**
-     * Unsubscribe from newsletter.
-     */
+
     public function unsubscribe(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $request->validate([

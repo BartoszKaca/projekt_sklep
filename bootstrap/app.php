@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'guest.checkout' => \App\Http\Middleware\GuestCheckoutMiddleware::class,
+            'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
         ]);
         
         // Exclude PayU webhook from CSRF protection

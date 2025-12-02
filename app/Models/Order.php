@@ -48,7 +48,7 @@ class Order extends Model
         return $this->hasMany(StockMovement::class);
     }
 
-    // Scopes
+
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
@@ -69,15 +69,13 @@ class Order extends Model
         return $query->where('payment_status', '!=', 'paid');
     }
 
-    // Helpers
+
     public static function generateOrderNumber()
     {
         return 'ORD-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
     }
 
-    /**
-     * Mark order as paid.
-     */
+
     public function markAsPaid()
     {
         $this->update([
@@ -86,9 +84,7 @@ class Order extends Model
         ]);
     }
 
-    /**
-     * Mark order as shipped.
-     */
+
     public function markAsShipped($trackingNumber = null, $carrier = null)
     {
         $this->update([
@@ -99,9 +95,7 @@ class Order extends Model
         ]);
     }
 
-    /**
-     * Mark order as delivered.
-     */
+
     public function markAsDelivered()
     {
         $this->update([
@@ -110,17 +104,13 @@ class Order extends Model
         ]);
     }
 
-    /**
-     * Check if order is paid.
-     */
+
     public function isPaid()
     {
         return $this->payment_status === 'paid';
     }
 
-    /**
-     * Check if order can be cancelled.
-     */
+
     public function canBeCancelled()
     {
         return in_array($this->status, ['pending', 'confirmed']);

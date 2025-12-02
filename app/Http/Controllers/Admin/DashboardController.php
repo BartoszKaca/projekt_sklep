@@ -1,6 +1,6 @@
 <?php
 
-// app/Http/Controllers/Admin/DashboardController.php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -38,7 +38,7 @@ class DashboardController extends Controller
     }
 }
 
-// app/Http/Controllers/Admin/ProductController.php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -219,7 +219,7 @@ class ProductController extends Controller
     }
 }
 
-// app/Http/Controllers/Admin/OrderController.php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -294,7 +294,7 @@ class OrderController extends Controller
     }
 }
 
-// app/Http/Controllers/Admin/StockController.php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -332,7 +332,7 @@ class StockController extends Controller
 
     public function export()
     {
-        // Implementacja eksportu do CSV/Excel
+
         $products = Product::with('category')->get();
 
         $filename = 'stock_report_' . date('Y-m-d') . '.csv';
@@ -363,7 +363,7 @@ class StockController extends Controller
     }
 }
 
-// app/Http/Controllers/Admin/CategoryController.php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -418,7 +418,7 @@ class CategoryController extends Controller
     }
 }
 
-// app/Http/Controllers/Admin/ReportController.php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -435,7 +435,7 @@ class ReportController extends Controller
         $startDate = $request->input('start_date', now()->subMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
-        // Sprzedaż według dni
+
         $dailySales = Order::where('payment_status', 'paid')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as orders, SUM(total) as revenue')
@@ -443,7 +443,7 @@ class ReportController extends Controller
             ->orderBy('date')
             ->get();
 
-        // Top produkty
+
         $topProducts = OrderItem::select('product_id', 'product_name', 'sku')
             ->selectRaw('SUM(quantity) as total_sold, SUM(total) as revenue')
             ->whereHas('order', function($q) use ($startDate, $endDate) {
@@ -455,7 +455,7 @@ class ReportController extends Controller
             ->take(10)
             ->get();
 
-        // Statystyki
+
         $stats = [
             'total_revenue' => Order::where('payment_status', 'paid')
                 ->whereBetween('created_at', [$startDate, $endDate])
@@ -503,7 +503,7 @@ class ReportController extends Controller
     }
 }
 
-// app/Http/Controllers/Admin/CouponController.php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -561,7 +561,7 @@ class CouponController extends Controller
     }
 }
 
-// app/Http/Controllers/Admin/UserController.php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -616,7 +616,7 @@ class UserController extends Controller
     }
 }
 
-// app/Http/Controllers/Admin/ReviewController.php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;

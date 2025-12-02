@@ -578,22 +578,22 @@
             <div class="footer-section">
                 <h3>Sklep</h3>
                 <ul class="footer-links">
-                    <li><a href="#">Nowości</a></li>
-                    <li><a href="#">Bestsellery</a></li>
-                    <li><a href="#">Promocje</a></li>
-                    <li><a href="#">Limitowane edycje</a></li>
-                    <li><a href="#">Pre-ordery</a></li>
+                    <li><a href="{{ route('home') }}">Nowości</a></li>
+                    <li><a href="{{ route('products.index') }}">Wszystkie produkty</a></li>
+                    <li><a href="{{ route('products.index') }}?sort=popular">Bestsellery</a></li>
+                    <li><a href="{{ route('products.index') }}?filter=sale">Promocje</a></li>
+                    <li><a href="{{ route('products.index') }}?filter=limited">Limitowane edycje</a></li>
                 </ul>
             </div>
 
             <div class="footer-section">
                 <h3>Informacje</h3>
                 <ul class="footer-links">
-                    <li><a href="#">O nas</a></li>
-                    <li><a href="#">Regulamin</a></li>
-                    <li><a href="#">Polityka prywatności</a></li>
-                    <li><a href="#">Dostawa i płatność</a></li>
-                    <li><a href="#">Zwroty i reklamacje</a></li>
+                    <li><a href="{{ route('about') }}">O nas</a></li>
+                    <li><a href="{{ route('terms') }}">Regulamin</a></li>
+                    <li><a href="{{ route('privacy') }}">Polityka prywatności</a></li>
+                    <li><a href="{{ route('shipping') }}">Dostawa i płatność</a></li>
+                    <li><a href="{{ route('returns') }}">Zwroty i reklamacje</a></li>
                 </ul>
             </div>
 

@@ -22,7 +22,7 @@ class EmailVerificationMail extends Mailable
      */
     public function __construct(
         public User $user,
-        public string $verificationUrl
+        public string $verificationCode
     ) {}
 
     /**

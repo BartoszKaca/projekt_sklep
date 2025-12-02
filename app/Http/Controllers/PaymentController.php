@@ -8,15 +8,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
-/**
- * Controller for payment processing.
- * Handles PayU integration for online payments.
- */
+
 class PaymentController extends Controller
 {
-    /**
-     * Configure PayU SDK with credentials.
-     */
+
     private function configurePayU(): void
     {
         \OpenPayU_Configuration::setEnvironment(config('payu.environment', 'sandbox'));
@@ -26,9 +21,7 @@ class PaymentController extends Controller
         \OpenPayU_Configuration::setOauthClientSecret(config('payu.client_secret'));
     }
 
-    /**
-     * Configure PayU SDK with minimal credentials for notifications.
-     */
+
     private function configurePayUForNotifications(): void
     {
         \OpenPayU_Configuration::setEnvironment(config('payu.environment', 'sandbox'));
@@ -36,26 +29,24 @@ class PaymentController extends Controller
         \OpenPayU_Configuration::setSignatureKey(config('payu.signature_key'));
     }
 
-    /**
-     * Initialize PayU payment.
-     */
+
     public function process(Order $order): RedirectResponse|View
     {
-        // Verify order ownership
+
         if (auth()->check() && $order->user_id && $order->user_id !== auth()->id()) {
             return redirect()->route('home')
                 ->with('error', 'Nie masz dostępu do tego zamówienia.');
         }
 
-        // Check if order is already paid
+
         if ($order->payment_status === 'paid') {
             return redirect()->route('checkout.success', ['order' => $order->id])
                 ->with('info', 'To zamówienie zostało już opłacone.');
         }
 
-        // Check if PayU is configured
+
         if (!config('payu.pos_id') || !config('payu.signature_key')) {
-            // Fallback to bank transfer if PayU not configured
+
             Log::warning('PayU not configured, falling back to bank transfer');
             $order->update(['payment_method' => 'bank_transfer']);
 
@@ -64,10 +55,10 @@ class PaymentController extends Controller
         }
 
         try {
-            // Initialize PayU SDK
+
             $this->configurePayU();
 
-            // Prepare order data
+
             $orderData = [
                 'notifyUrl' => route('payment.notify'),
                 'continueUrl' => route('payment.return', ['order' => $order->id]),
@@ -92,7 +83,7 @@ class PaymentController extends Controller
                 })->toArray(),
             ];
 
-            // Add shipping as product if applicable
+
             if ($order->shipping_cost > 0) {
                 $orderData['products'][] = [
                     'name' => 'Dostawa',
@@ -107,7 +98,7 @@ class PaymentController extends Controller
             if ($status === 'SUCCESS') {
                 $redirectUri = $response->getResponse()->redirectUri;
                 
-                // Store PayU order ID for reference
+
                 $order->update([
                     'payu_order_id' => $response->getResponse()->orderId ?? null
                 ]);
@@ -127,12 +118,10 @@ class PaymentController extends Controller
         }
     }
 
-    /**
-     * Handle return from PayU.
-     */
+
     public function return(Order $order): RedirectResponse
     {
-        // Refresh order to get latest payment status
+
         $order->refresh();
         
         if ($order->payment_status === 'paid') {
@@ -144,19 +133,17 @@ class PaymentController extends Controller
             ->with('info', 'Dziękujemy za płatność. Status zostanie zaktualizowany po weryfikacji.');
     }
 
-    /**
-     * Handle PayU webhook notification.
-     */
+
     public function notify(Request $request): \Illuminate\Http\JsonResponse
     {
         try {
-            // Initialize PayU SDK
+
             $this->configurePayUForNotifications();
 
-            // Get raw body
+
             $body = file_get_contents('php://input');
             
-            // Parse notification
+
             $result = \OpenPayU_Order::consumeNotification($body);
 
             if (!$result || !isset($result->getResponse()->order)) {
@@ -182,14 +169,14 @@ class PaymentController extends Controller
 
             Log::info("PayU notification for order {$orderNumber}: {$payuStatus}");
 
-            // Process based on PayU status
+
             switch ($payuStatus) {
                 case 'COMPLETED':
-                    // Payment successful
+
                     if ($order->payment_status !== 'paid') {
                         $order->markAsPaid();
                         
-                        // Auto-update status to processing if still pending
+
                         if ($order->status === 'pending') {
                             $order->update(['status' => 'processing']);
                         }
@@ -199,7 +186,6 @@ class PaymentController extends Controller
                     break;
 
                 case 'CANCELED':
-                    // Payment canceled
                     $order->update([
                         'payment_status' => 'failed',
                         'status' => 'cancelled'
@@ -209,7 +195,6 @@ class PaymentController extends Controller
 
                 case 'PENDING':
                 case 'WAITING_FOR_CONFIRMATION':
-                    // Payment pending
                     if ($order->payment_status === 'pending') {
                         Log::info("Order {$orderNumber} payment still pending");
                     } else {
@@ -218,7 +203,6 @@ class PaymentController extends Controller
                     break;
 
                 case 'REJECTED':
-                    // Payment rejected
                     $order->update(['payment_status' => 'failed']);
                     Log::warning("Order {$orderNumber} payment rejected");
                     break;
@@ -227,7 +211,7 @@ class PaymentController extends Controller
                     Log::warning("Order {$orderNumber} unknown PayU status: {$payuStatus}");
             }
 
-            // Acknowledge notification
+
             return response()->json(['status' => 'OK'], 200);
 
         } catch (\OpenPayU_Exception $e) {
@@ -239,12 +223,10 @@ class PaymentController extends Controller
         }
     }
 
-    /**
-     * Check payment status (for polling from frontend if needed).
-     */
+
     public function checkStatus(Order $order): \Illuminate\Http\JsonResponse
     {
-        // Verify order ownership
+
         if (auth()->check() && $order->user_id && $order->user_id !== auth()->id()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }

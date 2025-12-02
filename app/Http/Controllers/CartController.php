@@ -18,7 +18,6 @@ class CartController extends Controller
 
     protected function saveCart(array $cart): void
     {
-        // recalculate total
         $total = 0;
         foreach ($cart['items'] as $item) {
             $total += ($item['price'] * $item['quantity']);
@@ -33,7 +32,7 @@ class CartController extends Controller
         return view('cart.index', compact('cart'));
     }
 
-    // add item via AJAX/form
+
     public function add(Request $request)
     {
         $request->validate([
@@ -49,7 +48,7 @@ class CartController extends Controller
 
         $quantity = max(1, (int) $request->quantity);
 
-        // Determine variant and price
+
         $variant = null;
         if ($request->variant_id) {
             $variant = ProductVariant::find($request->variant_id);
@@ -60,7 +59,7 @@ class CartController extends Controller
             $stock = $variant->stock ?? null;
             $itemKey = 'v'.$variant->id;
         } else {
-            // no variant selected - fallback to product price / first variant if exists
+
             $variant = $product->variants()->first();
             if ($variant) {
                 $price = $variant->price ?? $product->getFinalPrice() ?? $product->price;
@@ -73,7 +72,7 @@ class CartController extends Controller
             }
         }
 
-        // check stock if available
+
         if ($stock !== null && $stock < $quantity) {
             return response()->json(['success' => false, 'message' => 'Brak wystarczającego stanu magazynowego.'], 400);
         }
@@ -95,7 +94,7 @@ class CartController extends Controller
 
         $this->saveCart($cart);
 
-        // compute cart count (sum quantities)
+
         $count = 0;
         foreach ($cart['items'] as $it) { $count += $it['quantity']; }
 

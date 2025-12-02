@@ -29,6 +29,14 @@ class GuestCheckoutMiddleware
                 ->with('error', 'Twój koszyk jest pusty.');
         }
 
+        // If user is authenticated, check if email is verified
+        if ($request->user() && 
+            $request->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail &&
+            !$request->user()->hasVerifiedEmail()) {
+            return redirect()->route('verify.email.form')
+                ->with('error', 'Musisz zweryfikować swój adres email, aby kontynuować.');
+        }
+
         return $next($request);
     }
 }

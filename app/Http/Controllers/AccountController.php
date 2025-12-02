@@ -13,23 +13,14 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 
-/**
- * Controller for user account management.
- * Handles dashboard, profile editing, password changes, addresses, orders, and wishlist.
- */
+
 class AccountController extends Controller
 {
-    /**
-     * Create a new controller instance.
-     */
+
     public function __construct()
     {
         $this->middleware('auth');
     }
-
-    /**
-     * Display the user dashboard.
-     */
 
 
     public function dashboard(): View
@@ -43,18 +34,14 @@ class AccountController extends Controller
         return view('account.dashboard', compact('user', 'recentOrders', 'recentOrdersCount', 'wishlistCount', 'addressCount'));
     }
 
-    /**
-     * Show the profile edit form.
-     */
+
     public function editProfile(): View
     {
         $user = auth()->user();
         return view('account.profile', compact('user'));
     }
 
-    /**
-     * Update the user profile.
-     */
+
     public function updateProfile(UpdateProfileRequest $request): RedirectResponse
     {
         $user = auth()->user();
@@ -64,17 +51,13 @@ class AccountController extends Controller
             ->with('success', 'Profil został zaktualizowany.');
     }
 
-    /**
-     * Show the password change form.
-     */
+
     public function showPasswordForm(): View
     {
         return view('account.password');
     }
 
-    /**
-     * Update the user password.
-     */
+
     public function updatePassword(PasswordUpdateRequest $request): RedirectResponse
     {
         $user = auth()->user();
@@ -86,26 +69,20 @@ class AccountController extends Controller
             ->with('success', 'Hasło zostało zmienione.');
     }
 
-    /**
-     * Display user addresses.
-     */
+
     public function addresses(): View
     {
         $addresses = auth()->user()->addresses()->orderBy('is_default', 'desc')->get();
         return view('account.addresses', compact('addresses'));
     }
 
-    /**
-     * Show the address creation form.
-     */
+
     public function createAddress(): View
     {
         return view('account.address-form', ['address' => null]);
     }
 
-    /**
-     * Store a new address.
-     */
+
     public function storeAddress(AddressRequest $request): RedirectResponse
     {
         $user = auth()->user();
@@ -121,9 +98,7 @@ class AccountController extends Controller
             ->with('success', 'Adres został dodany.');
     }
 
-    /**
-     * Show the address edit form.
-     */
+
     public function editAddress(Address $address): View|RedirectResponse
     {
         // Ensure address belongs to authenticated user
@@ -135,9 +110,7 @@ class AccountController extends Controller
         return view('account.address-form', compact('address'));
     }
 
-    /**
-     * Update an existing address.
-     */
+
     public function updateAddress(AddressRequest $request, Address $address): RedirectResponse
     {
         // Ensure address belongs to authenticated user
@@ -159,9 +132,7 @@ class AccountController extends Controller
             ->with('success', 'Adres został zaktualizowany.');
     }
 
-    /**
-     * Delete an address.
-     */
+
     public function destroyAddress(Address $address): RedirectResponse
     {
         // Ensure address belongs to authenticated user
@@ -176,9 +147,7 @@ class AccountController extends Controller
             ->with('success', 'Adres został usunięty.');
     }
 
-    /**
-     * Set an address as default.
-     */
+
     public function setDefaultAddress(Address $address): RedirectResponse
     {
         // Ensure address belongs to authenticated user
@@ -195,9 +164,7 @@ class AccountController extends Controller
             ->with('success', 'Adres domyślny został zmieniony.');
     }
 
-    /**
-     * Display user orders.
-     */
+
     public function orders(): View
     {
         $orders = auth()->user()->orders()
@@ -208,9 +175,7 @@ class AccountController extends Controller
         return view('account.orders', compact('orders'));
     }
 
-    /**
-     * Show order details.
-     */
+
     public function showOrder(int $orderId): View|RedirectResponse
     {
         $order = auth()->user()->orders()
@@ -225,9 +190,7 @@ class AccountController extends Controller
         return view('account.order-detail', compact('order'));
     }
 
-    /**
-     * Display user wishlist.
-     */
+
     public function wishlist(): View
     {
         $wishlist = auth()->user()->wishlist()
@@ -237,9 +200,7 @@ class AccountController extends Controller
         return view('account.wishlist', compact('wishlist'));
     }
 
-    /**
-     * Add product to wishlist.
-     */
+
     public function addToWishlist(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $request->validate([
@@ -268,9 +229,7 @@ class AccountController extends Controller
             ->with('success', 'Produkt został dodany do ulubionych.');
     }
 
-    /**
-     * Remove product from wishlist.
-     */
+
     public function removeFromWishlist(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $request->validate([

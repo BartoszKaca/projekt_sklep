@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
 {
-     use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'category_id', 'name', 'slug', 'description', 'type', 'price', 
@@ -61,7 +61,7 @@ class Product extends Model
         return $this->hasMany(Wishlist::class);
     }
 
-    // Scopes
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -87,7 +87,7 @@ class Product extends Model
         return $query->where('type', 'merch');
     }
 
-    // Helpers
+
     public function isLowStock()
     {
         return $this->stock_quantity <= $this->low_stock_threshold;

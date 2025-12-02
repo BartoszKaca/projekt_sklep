@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Potwierdź swój adres email</title>
+    <title>Kod weryfikacyjny</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -49,19 +49,16 @@
             margin: 0 auto 20px;
             font-size: 40px;
         }
-        .btn {
-            display: inline-block;
+        .code-box {
             background: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);
-            color: white !important;
-            padding: 16px 40px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 16px;
-            margin: 25px 0;
-        }
-        .btn:hover {
-            transform: translateY(-2px);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+            font-size: 48px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
         }
         .note {
             background: #f8fafc;
@@ -70,6 +67,14 @@
             margin: 20px 0;
             font-size: 14px;
             color: #64748b;
+        }
+        .warning {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 14px;
         }
         .footer {
             background: #0f172a;
@@ -84,33 +89,42 @@
     <div class="container">
         <div class="header">
             <h1>🎵 Rap Shop</h1>
-            <p>Potwierdź swój adres email</p>
+            <p>Kod weryfikacyjny</p>
         </div>
 
         <div class="content">
-            <div class="icon">✉️</div>
+            <div class="icon">🔐</div>
 
             <h2>Cześć, {{ $user->name }}!</h2>
 
             <p>Dziękujemy za rejestrację w Rap Shop!</p>
 
-            <p>Kliknij poniższy przycisk, aby potwierdzić swój adres email i aktywować konto:</p>
+            <p>Oto Twój kod weryfikacyjny:</p>
 
-            <a href="{{ $verificationUrl }}" class="btn">Potwierdź email</a>
-
-            <div class="note">
-                <p>Jeśli nie zakładałeś/aś konta w naszym sklepie, zignoruj tę wiadomość.</p>
-                <p>Link jest ważny przez 60 minut.</p>
+            <div class="code-box">
+                {{ $verificationCode }}
             </div>
 
-            <p style="font-size: 13px; color: #64748b;">
-                Jeśli przycisk nie działa, skopiuj i wklej poniższy link do przeglądarki:<br>
-                <a href="{{ $verificationUrl }}" style="color: #6366f1; word-break: break-all;">{{ $verificationUrl }}</a>
+            <p style="font-size: 16px; color: #334155;">
+                Wpisz ten kod na stronie weryfikacji, aby potwierdzić swój adres email.
             </p>
+
+            <div class="note">
+                <p><strong>⏰ Kod jest ważny przez 15 minut</strong></p>
+                <p>Po tym czasie możesz poprosić o wysłanie nowego kodu.</p>
+            </div>
+
+            <div class="warning">
+                <p><strong>⚠️ Uwaga bezpieczeństwa</strong></p>
+                <p>Jeśli nie zakładałeś/aś konta w naszym sklepie, zignoruj tę wiadomość i nie udostępniaj tego kodu nikomu.</p>
+            </div>
         </div>
 
         <div class="footer">
             <p>&copy; {{ date('Y') }} Rap Shop. Wszystkie prawa zastrzeżone.</p>
+            <p style="font-size: 12px; opacity: 0.7;">
+                Ten email został wysłany automatycznie. Prosimy nie odpowiadać na tę wiadomość.
+            </p>
         </div>
     </div>
 </body>

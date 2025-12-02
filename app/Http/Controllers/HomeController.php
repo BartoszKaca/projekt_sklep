@@ -8,21 +8,16 @@ use App\Models\Product;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 
-/**
- * Controller for the home page and product listings.
- * Provides filtering, sorting, and search functionality.
- */
+
 class HomeController extends Controller
 {
     public function __construct()
     {
-        // Pozwól gościom zobaczyć stronę główną
+
         $this->middleware('auth')->except(['index', 'search', 'products']);
     }
 
-    /**
-     * Display the home page with featured and latest products.
-     */
+
     public function index(): View
     {
         $featuredProducts = Product::where('is_active', 1)
@@ -44,22 +39,20 @@ class HomeController extends Controller
         return view('home', compact('featuredProducts', 'latestProducts', 'categories'));
     }
 
-    /**
-     * Display all products with filtering and sorting.
-     */
+
     public function products(Request $request): View
     {
         $query = Product::where('is_active', 1)
             ->with(['primaryImage', 'category', 'reviews']);
 
-        // Filter by category
+
         if ($request->filled('category')) {
             $query->whereHas('category', function($q) use ($request) {
                 $q->where('slug', $request->category);
             });
         }
 
-        // Filter by price range
+
         if ($request->filled('min_price')) {
             $query->where(function($q) use ($request) {
                 $q->where('price', '>=', $request->min_price)
@@ -79,17 +72,17 @@ class HomeController extends Controller
             });
         }
 
-        // Filter by type
+
         if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
 
-        // Filter by format
+
         if ($request->filled('format')) {
             $query->where('format', $request->format);
         }
 
-        // Search
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -99,7 +92,7 @@ class HomeController extends Controller
             });
         }
 
-        // Sorting
+
         switch ($request->get('sort', 'newest')) {
             case 'price_asc':
                 $query->orderByRaw('COALESCE(discount_price, price) ASC');
@@ -125,7 +118,7 @@ class HomeController extends Controller
         $products = $query->paginate(20)->withQueryString();
         $categories = Category::active()->get();
 
-        // Get price range for filters
+
         $priceRange = Product::where('is_active', 1)->selectRaw('
             MIN(COALESCE(discount_price, price)) as min_price,
             MAX(COALESCE(discount_price, price)) as max_price
@@ -134,9 +127,7 @@ class HomeController extends Controller
         return view('products.index', compact('products', 'categories', 'priceRange'));
     }
 
-    /**
-     * Search products via AJAX.
-     */
+
     public function search(Request $request): \Illuminate\Http\JsonResponse
     {
         $search = $request->get('q', '');

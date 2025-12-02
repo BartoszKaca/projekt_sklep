@@ -394,7 +394,7 @@
                         : 0;
                     $barClass = $percentage > 100 ? 'high' : ($percentage > 50 ? 'medium' : 'low');
                 @endphp
-                <div class="stock-bar {{ $barClass }}" style="width: '{{ $percentage }}''%'"></div>
+                <div class="stock-bar {{ $barClass }}" style="width: {{ $percentage }}%"></div>
             </div>
         </div>
 

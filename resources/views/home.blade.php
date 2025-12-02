@@ -711,14 +711,140 @@
 @push('scripts')
 <script>
     function addToCart(productId) {
-        console.log('Add to cart:', productId);
-        // Implementacja dodawania do koszyka
-        alert('Produkt dodany do koszyka!');
+        // Dodaj token CSRF
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        fetch('{{ route('cart.add') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                product_id: productId,
+                quantity: 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Pokaż powiadomienie sukcesu
+                showNotification('Produkt dodany do koszyka!', 'success');
+                
+                // Zaktualizuj licznik koszyka jeśli istnieje
+                const cartBadge = document.querySelector('.cart-badge');
+                if (cartBadge && data.cart_count) {
+                    cartBadge.textContent = data.cart_count;
+                    cartBadge.style.display = 'flex';
+                }
+            } else {
+                showNotification(data.message || 'Wystąpił błąd', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Wystąpił błąd podczas dodawania do koszyka', 'error');
+        });
     }
 
     function toggleWishlist(productId) {
-        console.log('Toggle wishlist:', productId);
-        // Implementacja listy życzeń
+        @guest
+            // Jeśli użytkownik nie jest zalogowany, przekieruj do logowania
+            showNotification('Musisz być zalogowany, aby dodać produkt do ulubionych', 'info');
+            setTimeout(() => {
+                window.location.href = '{{ route('login') }}';
+            }, 1500);
+            return;
+        @endguest
+
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        fetch('{{ route('account.wishlist.add') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                product_id: productId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message || 'Dodano do ulubionych!', 'success');
+            } else {
+                showNotification(data.message || 'Wystąpił błąd', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Wystąpił błąd', 'error');
+        });
+    }
+
+    function showNotification(message, type = 'info') {
+        // Utwórz element powiadomienia
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Usuń po 3 sekundach
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+
+    // Dodaj style dla animacji
+    if (!document.querySelector('#notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
     }
 </script>
 @endpush
