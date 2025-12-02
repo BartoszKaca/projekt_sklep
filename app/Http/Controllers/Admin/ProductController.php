@@ -173,7 +173,7 @@ class ProductController extends Controller
             'stock_after' => $product->fresh()->stock_quantity,
             'reason' => $validated['reason'],
             'reference' => $validated['reference'] ?? null,
-            'user_id' => user()->id ?? null,
+            'user_id' => auth()->user()->id ?? null,
         ]);
 
         return back()->with('success', 'Stan magazynowy został zaktualizowany!');

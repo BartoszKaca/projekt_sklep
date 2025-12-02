@@ -3,9 +3,14 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Mail\EmailVerificationMail;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Auth\RegistersUsers;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 
 class RegisterController extends Controller
@@ -52,6 +57,14 @@ class RegisterController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'name.required' => 'Imię jest wymagane.',
+            'email.required' => 'Adres email jest wymagany.',
+            'email.email' => 'Podaj poprawny adres email.',
+            'email.unique' => 'Ten adres email jest już zarejestrowany.',
+            'password.required' => 'Hasło jest wymagane.',
+            'password.min' => 'Hasło musi mieć minimum 8 znaków.',
+            'password.confirmed' => 'Hasła nie są identyczne.',
         ]);
     }
 
@@ -68,5 +81,56 @@ class RegisterController extends Controller
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
         ]);
+    }
+
+    /**
+     * Handle a registration request for the application.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
+     */
+    public function register(Request $request)
+    {
+        $this->validator($request->all())->validate();
+
+        $user = $this->create($request->all());
+
+        event(new Registered($user));
+
+        // Send verification email
+        $this->sendVerificationEmail($user);
+
+        // Login user after registration
+        $this->guard()->login($user);
+
+        if ($response = $this->registered($request, $user)) {
+            return $response;
+        }
+
+        return $request->wantsJson()
+                    ? response()->json([], 201)
+                    : redirect($this->redirectPath())
+                        ->with('success', 'Konto zostało utworzone! Sprawdź swoją skrzynkę email, aby zweryfikować adres.');
+    }
+
+    /**
+     * Send email verification link to user.
+     *
+     * @param  \App\Models\User  $user
+     * @return void
+     */
+    protected function sendVerificationEmail(User $user)
+    {
+        try {
+            $verificationUrl = URL::temporarySignedRoute(
+                'verification.verify',
+                now()->addMinutes(60),
+                ['id' => $user->id, 'hash' => sha1($user->email)]
+            );
+
+            Mail::to($user->email)->send(new EmailVerificationMail($user, $verificationUrl));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send verification email: ' . $e->getMessage());
+        }
     }
 }

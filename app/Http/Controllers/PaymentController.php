@@ -106,6 +106,14 @@ class PaymentController extends Controller
 
             if ($status === 'SUCCESS') {
                 $redirectUri = $response->getResponse()->redirectUri;
+                
+                // Store PayU order ID for reference
+                $order->update([
+                    'payu_order_id' => $response->getResponse()->orderId ?? null
+                ]);
+                
+                Log::info("PayU payment initialized for order {$order->order_number}");
+                
                 return redirect()->away($redirectUri);
             }
 
@@ -124,6 +132,14 @@ class PaymentController extends Controller
      */
     public function return(Order $order): RedirectResponse
     {
+        // Refresh order to get latest payment status
+        $order->refresh();
+        
+        if ($order->payment_status === 'paid') {
+            return redirect()->route('checkout.success', ['order' => $order->id])
+                ->with('success', 'Płatność została zrealizowana pomyślnie!');
+        }
+        
         return redirect()->route('checkout.success', ['order' => $order->id])
             ->with('info', 'Dziękujemy za płatność. Status zostanie zaktualizowany po weryfikacji.');
     }
@@ -137,36 +153,123 @@ class PaymentController extends Controller
             // Initialize PayU SDK
             $this->configurePayUForNotifications();
 
+            // Get raw body
             $body = file_get_contents('php://input');
+            
+            // Parse notification
             $result = \OpenPayU_Order::consumeNotification($body);
 
-            if ($result->getResponse()->order->extOrderId) {
-                $orderNumber = $result->getResponse()->order->extOrderId;
-                $payuStatus = $result->getResponse()->order->status;
-
-                $order = Order::where('order_number', $orderNumber)->first();
-
-                if ($order) {
-                    switch ($payuStatus) {
-                        case 'COMPLETED':
-                            $order->markAsPaid();
-                            $order->update(['status' => 'processing']);
-                            break;
-                        case 'CANCELED':
-                            $order->update(['payment_status' => 'failed', 'status' => 'cancelled']);
-                            break;
-                        case 'PENDING':
-                            $order->update(['payment_status' => 'pending']);
-                            break;
-                    }
-                }
+            if (!$result || !isset($result->getResponse()->order)) {
+                Log::error('PayU notification: Invalid notification format');
+                return response()->json(['status' => 'ERROR'], 400);
             }
 
-            return response()->json(['status' => 'OK']);
+            $payuOrder = $result->getResponse()->order;
+            $orderNumber = $payuOrder->extOrderId ?? null;
+            $payuStatus = $payuOrder->status ?? null;
 
+            if (!$orderNumber || !$payuStatus) {
+                Log::error('PayU notification: Missing order number or status');
+                return response()->json(['status' => 'ERROR'], 400);
+            }
+
+            $order = Order::where('order_number', $orderNumber)->first();
+
+            if (!$order) {
+                Log::error("PayU notification: Order not found: {$orderNumber}");
+                return response()->json(['status' => 'ERROR'], 404);
+            }
+
+            Log::info("PayU notification for order {$orderNumber}: {$payuStatus}");
+
+            // Process based on PayU status
+            switch ($payuStatus) {
+                case 'COMPLETED':
+                    // Payment successful
+                    if ($order->payment_status !== 'paid') {
+                        $order->markAsPaid();
+                        
+                        // Auto-update status to processing if still pending
+                        if ($order->status === 'pending') {
+                            $order->update(['status' => 'processing']);
+                        }
+                        
+                        Log::info("Order {$orderNumber} marked as paid and processing");
+                    }
+                    break;
+
+                case 'CANCELED':
+                    // Payment canceled
+                    $order->update([
+                        'payment_status' => 'failed',
+                        'status' => 'cancelled'
+                    ]);
+                    Log::info("Order {$orderNumber} marked as cancelled");
+                    break;
+
+                case 'PENDING':
+                case 'WAITING_FOR_CONFIRMATION':
+                    // Payment pending
+                    if ($order->payment_status === 'pending') {
+                        Log::info("Order {$orderNumber} payment still pending");
+                    } else {
+                        $order->update(['payment_status' => 'pending']);
+                    }
+                    break;
+
+                case 'REJECTED':
+                    // Payment rejected
+                    $order->update(['payment_status' => 'failed']);
+                    Log::warning("Order {$orderNumber} payment rejected");
+                    break;
+
+                default:
+                    Log::warning("Order {$orderNumber} unknown PayU status: {$payuStatus}");
+            }
+
+            // Acknowledge notification
+            return response()->json(['status' => 'OK'], 200);
+
+        } catch (\OpenPayU_Exception $e) {
+            Log::error('PayU notification exception: ' . $e->getMessage());
+            return response()->json(['status' => 'ERROR'], 500);
         } catch (\Exception $e) {
             Log::error('PayU notification error: ' . $e->getMessage());
             return response()->json(['status' => 'ERROR'], 500);
+        }
+    }
+
+    /**
+     * Check payment status (for polling from frontend if needed).
+     */
+    public function checkStatus(Order $order): \Illuminate\Http\JsonResponse
+    {
+        // Verify order ownership
+        if (auth()->check() && $order->user_id && $order->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $this->configurePayU();
+
+            $response = \OpenPayU_Order::retrieve($order->order_number);
+
+            if ($response->getStatus() === 'SUCCESS') {
+                $payuStatus = $response->getResponse()->orders[0]->status ?? 'unknown';
+
+                return response()->json([
+                    'order_number' => $order->order_number,
+                    'payment_status' => $order->payment_status,
+                    'order_status' => $order->status,
+                    'payu_status' => $payuStatus,
+                ]);
+            }
+
+            return response()->json(['error' => 'Could not retrieve payment status'], 500);
+
+        } catch (\Exception $e) {
+            Log::error('PayU status check error: ' . $e->getMessage());
+            return response()->json(['error' => 'Error checking payment status'], 500);
         }
     }
 }

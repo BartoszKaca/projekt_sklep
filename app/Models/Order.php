@@ -14,7 +14,7 @@ class Order extends Model
         'order_number', 'user_id', 'status', 'subtotal', 'shipping_cost', 
         'tax', 'discount', 'total', 'coupon_code', 'payment_method', 
         'payment_status', 'customer_notes', 'admin_notes', 'tracking_number', 
-        'carrier', 'paid_at', 'shipped_at', 'delivered_at'
+        'carrier', 'payu_order_id', 'paid_at', 'shipped_at', 'delivered_at'
     ];
 
     protected $casts = [
@@ -59,12 +59,25 @@ class Order extends Model
         return $query->where('status', 'delivered');
     }
 
+    public function scopePaid($query)
+    {
+        return $query->where('payment_status', 'paid');
+    }
+
+    public function scopeUnpaid($query)
+    {
+        return $query->where('payment_status', '!=', 'paid');
+    }
+
     // Helpers
     public static function generateOrderNumber()
     {
         return 'ORD-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
     }
 
+    /**
+     * Mark order as paid.
+     */
     public function markAsPaid()
     {
         $this->update([
@@ -73,7 +86,10 @@ class Order extends Model
         ]);
     }
 
-    public function markAsShipped($trackingNumber, $carrier)
+    /**
+     * Mark order as shipped.
+     */
+    public function markAsShipped($trackingNumber = null, $carrier = null)
     {
         $this->update([
             'status' => 'shipped',
@@ -81,5 +97,32 @@ class Order extends Model
             'carrier' => $carrier,
             'shipped_at' => now(),
         ]);
+    }
+
+    /**
+     * Mark order as delivered.
+     */
+    public function markAsDelivered()
+    {
+        $this->update([
+            'status' => 'delivered',
+            'delivered_at' => now(),
+        ]);
+    }
+
+    /**
+     * Check if order is paid.
+     */
+    public function isPaid()
+    {
+        return $this->payment_status === 'paid';
+    }
+
+    /**
+     * Check if order can be cancelled.
+     */
+    public function canBeCancelled()
+    {
+        return in_array($this->status, ['pending', 'confirmed']);
     }
 }
