@@ -1,0 +1,87 @@
+FROM php:8.5-fpm-alpine
+
+# Zmienne budowania
+ENV LARAVEL_PATH=/var/www/html \
+    PHP_OPCACHE_ENABLE=1 \
+    PHP_OPCACHE_MEMORY_CONSUMPTION=256 \
+    PHP_FPM_MAX_CHILDREN=20 \
+    PHP_FPM_START_SERVERS=5 \
+    PHP_FPM_MIN_SPARE_SERVERS=3 \
+    PHP_FPM_MAX_SPARE_SERVERS=10
+
+# Instalacja systemowych zależności
+RUN apk add --no-cache \
+    curl \
+    git \
+    unzip \
+    bash \
+    supervisor \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    zip \
+    openssl-dev \
+    postgresql-dev \
+    oniguruma-dev \
+    libxml2-dev
+
+# Instalacja PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo \
+        pdo_mysql \
+        bcmath \
+        ctype \
+        curl \
+        fileinfo \
+        gd \
+        json \
+        mbstring \
+        openssl \
+        pcntl \
+        phar \
+        tokenizer \
+        xml \
+        xmlwriter \
+        xmlreader
+
+# Instalacja Opcache dla produkcji
+RUN docker-php-ext-install opcache && \
+    docker-php-ext-enable opcache
+
+# Konfiguracja PHP.ini dla produkcji
+COPY ./docker/php/php-production.ini /usr/local/etc/php/conf.d/99-production.ini
+COPY ./docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+COPY ./docker/php/php-fpm.conf /usr/local/etc/php-fpm.conf
+
+# Instalacja Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+# Ustawienie working directory
+WORKDIR $LARAVEL_PATH
+
+# Kopiowanie plików projektu
+COPY . $LARAVEL_PATH/
+
+# Instalacja PHP dependencies
+RUN composer install \
+    --optimize-autoloader \
+    --no-dev \
+    --no-interaction \
+    --no-progress
+
+# Permissje
+RUN chown -R www-data:www-data $LARAVEL_PATH && \
+    chmod -R 755 storage bootstrap/cache && \
+    chmod -R 775 storage bootstrap/cache
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:9000/status || exit 1
+
+# Eksposycja portów
+EXPOSE 9000
+
+# Uruchomienie PHP-FPM
+CMD ["php-fpm"]

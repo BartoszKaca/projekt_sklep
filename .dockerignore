@@ -1,0 +1,70 @@
+# .dockerignore - Files to exclude from Docker build
+# ==================================================
+
+.git
+.gitignore
+.gitlab-ci.yml
+.github
+.env.local
+.env.*.local
+.env.dusk.local
+.env.testing
+.env.*.testing
+
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build files
+dist/
+build/
+
+# Tests
+tests/
+phpunit.xml
+
+# Documentation
+*.md
+docs/
+DOCUMENTATION.md
+TESTING.md
+
+# Temporary
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+bootstrap/cache/*
+
+# Database
+database/database.sqlite
+
+# Docker specific
+Dockerfile
+docker-compose.yml
+docker-compose.dev.yml
+docker/
+
+# CI/CD
+.gitlab-ci.yml
+.github/
+Jenkinsfile
+.circleci/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SSH Keys
+*.pem
+*.key
+.ssh/

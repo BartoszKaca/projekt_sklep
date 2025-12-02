@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: laravel_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - app_storage:/var/www/html/storage
+      - app_bootstrap:/var/www/html/bootstrap/cache
+      - ./public:/var/www/html/public:ro
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - LOG_CHANNEL=stack
+    depends_on:
+      - db
+    networks:
+      - laravel
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/scripts/init_database.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - laravel
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: ${DB_ROOT_PASSWORD}
+      UPLOAD_LIMIT: 256M
+      MAX_EXECUTION_TIME: 300
+    volumes:
+      - phpmyadmin_config:/sessions
+    networks:
+      - laravel
+    # PHPMyAdmin będzie dostępny przez Nginx reverse proxy
+    # Na razie nie exportujemy portów wprost - tylko przez Nginx
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # OPCJONALNIE: Redis dla Cache/Sessions
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - laravel
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - cache  # Uruchom: docker-compose -f docker-compose.prod.yml --profile cache up
+
+volumes:
+  mysql_data:
+    driver: local
+  app_storage:
+    driver: local
+  app_bootstrap:
+    driver: local
+  phpmyadmin_config:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  laravel:
+    driver: bridge
