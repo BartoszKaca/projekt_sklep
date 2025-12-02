@@ -10,10 +10,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 
-
 class NewsletterController extends Controller
 {
-
+    // Zapisz się do newslettera
     public function subscribe(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $request->validate([
@@ -22,31 +21,38 @@ class NewsletterController extends Controller
 
         $email = $request->email;
 
-
+        // Sprawdź czy email już istnieje
         $existing = NewsletterSubscriber::where('email', $email)->first();
 
         if ($existing) {
             if ($existing->is_active) {
                 $message = 'Ten adres email jest już zapisany do newslettera.';
             } else {
-                $existing->update(['is_active' => true]);
+                // Reaktywuj subskrypcję
+                $existing->update([
+                    'is_active' => true,
+                    'subscribed_at' => now()
+                ]);
                 $message = 'Twoja subskrypcja została reaktywowana.';
             }
         } else {
+            // Utwórz nową subskrypcję
             NewsletterSubscriber::create([
                 'email' => $email,
                 'is_active' => true,
+                'subscribed_at' => now(),
             ]);
             $message = 'Dziękujemy za zapisanie do newslettera!';
 
-
+            // Wyślij email powitalny
             try {
                 Mail::to($email)->send(new NewsletterSubscriptionMail($email));
             } catch (\Exception $e) {
-                Log::error('Failed to send newsletter confirmation: ' . $e->getMessage());
+                Log::error('Błąd wysyłki emaila: ' . $e->getMessage());
             }
         }
 
+        // Odpowiedź AJAX
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
@@ -54,10 +60,11 @@ class NewsletterController extends Controller
             ]);
         }
 
+        // Zwykłe przekierowanie
         return redirect()->back()->with('success', $message);
     }
 
-
+    // Wypisz się z newslettera
     public function unsubscribe(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $request->validate([
@@ -73,6 +80,7 @@ class NewsletterController extends Controller
             $message = 'Podany adres email nie jest zapisany do newslettera.';
         }
 
+        // Odpowiedź AJAX
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
@@ -80,6 +88,7 @@ class NewsletterController extends Controller
             ]);
         }
 
+        // Zwykłe przekierowanie
         return redirect()->back()->with('success', $message);
     }
 }

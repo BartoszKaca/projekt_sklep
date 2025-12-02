@@ -115,4 +115,21 @@ class Order extends Model
     {
         return in_array($this->status, ['pending', 'confirmed']);
     }
+
+    public function markAsCancelled($reason = null)
+    {
+        $this->update([
+            'status' => 'cancelled',
+            'admin_notes' => ($this->admin_notes ? $this->admin_notes . '\n' : '') . 'Anulowane. ' . ($reason ?? ''),
+        ]);
+    }
+
+    public function markAsRefunded($reason = null)
+    {
+        $this->update([
+            'status' => 'refunded',
+            'payment_status' => 'refunded',
+            'admin_notes' => ($this->admin_notes ? $this->admin_notes . '\n' : '') . 'Zwrot. ' . ($reason ?? ''),
+        ]);
+    }
 }

@@ -1,6 +1,5 @@
 @extends('layouts.shop')
 
-@section('title','Ulubione')
 @section('title', 'Ulubione')
 
 @push('styles')

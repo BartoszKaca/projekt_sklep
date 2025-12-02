@@ -370,6 +370,7 @@
                         <option value="shipped" {{ $order->status == 'shipped' ? 'selected' : '' }}>Wysłane</option>
                         <option value="delivered" {{ $order->status == 'delivered' ? 'selected' : '' }}>Dostarczone</option>
                         <option value="cancelled" {{ $order->status == 'cancelled' ? 'selected' : '' }}>Anulowane</option>
+                        <option value="refunded" {{ $order->status == 'refunded' ? 'selected' : '' }}>Zwrot</option>
                     </select>
                 </div>
 

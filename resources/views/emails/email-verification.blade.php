@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kod weryfikacyjny</title>
+    <title>Weryfikacja adresu email</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -99,11 +99,25 @@
 
             <p>Dziękujemy za rejestrację w Rap Shop!</p>
 
-            <p>Oto Twój kod weryfikacyjny:</p>
+            @php
+                $payload = $verificationPayload ?? null;
+                $isUrl = $payload && (strpos($payload, 'http') === 0);
+            @endphp
 
-            <div class="code-box">
-                {{ $verificationCode }}
-            </div>
+            @if($isUrl)
+                <p>Kliknij poniższy link, aby potwierdzić swój adres email:</p>
+                <div class="code-box">
+                    <a href="{{ $payload }}" style="color: white; text-decoration: none;">Zweryfikuj adres email</a>
+                </div>
+                <p style="font-size: 16px; color: #334155; margin-top: 10px;">Jeśli nie możesz kliknąć linku, wklej URL w przeglądarce:</p>
+                <p style="font-size: 14px; color: #334155; word-break: break-all;">{{ $payload }}</p>
+            @else
+                <p>Oto Twój kod weryfikacyjny:</p>
+
+                <div class="code-box">
+                    {{ $payload }}
+                </div>
+            @endif
 
             <p style="font-size: 16px; color: #334155;">
                 Wpisz ten kod na stronie weryfikacji, aby potwierdzić swój adres email.

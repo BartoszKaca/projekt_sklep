@@ -89,14 +89,18 @@
                 </div>
             </div>
 
-            <div style="margin-top:1.5rem; display:flex; gap:0.75rem;">
-                <button class="btn btn-primary" onclick="addToCart('{{ $product->id }}')">
+            <div style="margin-top:1.5rem; display:flex; gap:0.5rem; align-items:center;">
+                <button class="btn btn-primary btn-sm" onclick="addToCart('{{ $product->id }}')">
                     <i class="fas fa-shopping-bag"></i> Dodaj do koszyka
                 </button>
 
-                <a href="{{ route('cart.index') }}" class="btn btn-secondary" style="display:inline-flex; align-items:center;">
+                <a href="{{ route('cart.index') }}" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center;">
                     <i class="fas fa-shopping-cart"></i>&nbsp;Przejdź do koszyka
                 </a>
+
+                <button class="btn btn-sm" style="border:1px solid var(--border); background:white;" onclick="toggleWishlist('{{ $product->id }}')">
+                    <i class="far fa-heart" aria-hidden="true"></i>&nbsp;Dodaj do ulubionych
+                </button>
             </div>
 
             <hr style="margin:1.25rem 0; border:none; border-top:1px solid var(--border)">

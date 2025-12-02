@@ -39,7 +39,7 @@ class NewsletterSubscriptionMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.newsletter-subscription',
+            view: 'emails.newsletter',
         );
     }
 

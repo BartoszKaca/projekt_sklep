@@ -22,7 +22,8 @@ class EmailVerificationMail extends Mailable
      */
     public function __construct(
         public User $user,
-        public string $verificationCode
+        // Payload can be a 6-digit code or a signed URL — we detect at runtime in the view.
+        public ?string $verificationPayload = null
     ) {}
 
     /**

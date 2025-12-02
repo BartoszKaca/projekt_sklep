@@ -44,15 +44,34 @@ class OrderController extends Controller
         $validated = $request->validate([
             'status' => 'required|in:pending,confirmed,processing,shipped,delivered,cancelled,refunded',
             'admin_notes' => 'nullable|string',
+            'tracking_number' => 'nullable|string',
+            'carrier' => 'nullable|string',
         ]);
 
-        $order->update($validated);
+        $order->update([
+            'status' => $validated['status'],
+            'admin_notes' => $validated['admin_notes'] ?? $order->admin_notes,
+            'payment_status' => $validated['status'] === 'refunded' ? 'refunded' : $order->payment_status,
+        ]);
 
+        // Handle specific status transitions
         if ($validated['status'] === 'shipped' && $request->filled('tracking_number')) {
             $order->markAsShipped(
                 $request->tracking_number,
                 $request->carrier ?? 'InPost'
             );
+        }
+
+        if ($validated['status'] === 'delivered') {
+            $order->markAsDelivered();
+        }
+
+        if ($validated['status'] === 'cancelled') {
+            $order->markAsCancelled($request->input('admin_notes'));
+        }
+
+        if ($validated['status'] === 'refunded') {
+            $order->markAsRefunded($request->input('admin_notes'));
         }
 
         return back()->with('success', 'Status zamówienia został zaktualizowany!');

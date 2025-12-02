@@ -21,50 +21,14 @@
 
                         <div class="alert alert-info" role="alert">
                             <strong>Sprawdź swoją skrzynkę email!</strong><br>
-                            Wysłaliśmy 6-cyfrowy kod weryfikacyjny na adres: <strong>{{ auth()->user()->email }}</strong>
+                            Wysłaliśmy link weryfikacyjny na adres: <strong>{{ auth()->user()->email }}</strong>
                         </div>
 
-                        <p class="mb-4">Wprowadź kod z wiadomości email, aby zweryfikować swoje konto i uzyskać pełny dostęp.</p>
+                        <p class="mb-4">Kliknij link w wiadomości email, aby zweryfikować swoje konto i uzyskać pełny dostęp.</p>
 
-                        <form method="POST" action="{{ route('verify.email') }}">
-                            @csrf
-
-                            <div class="row mb-3">
-                                <label for="code" class="col-md-4 col-form-label text-md-end">Kod weryfikacyjny</label>
-
-                                <div class="col-md-6">
-                                    <input id="code" 
-                                           type="text" 
-                                           class="form-control @error('code') is-invalid @enderror" 
-                                           name="code" 
-                                           value="{{ old('code') }}" 
-                                           required 
-                                           autofocus
-                                           maxlength="6"
-                                           placeholder="000000"
-                                           pattern="[0-9]{6}"
-                                           inputmode="numeric">
-
-                                    @error('code')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
-                                    @enderror
-
-                                    <small class="form-text text-muted">
-                                        Wpisz 6-cyfrowy kod z emaila
-                                    </small>
-                                </div>
-                            </div>
-
-                            <div class="row mb-0">
-                                <div class="col-md-6 offset-md-4">
-                                    <button type="submit" class="btn btn-primary">
-                                        Zweryfikuj email
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
+                        <div class="mb-4">
+                            <p>Jeżeli nie otrzymałeś/aś linku weryfikacyjnego, możesz poprosić o jego ponowne wysłanie poniżej.</p>
+                        </div>
 
                         <hr class="my-4">
 

@@ -13,8 +13,7 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasApiTokens, Notifiable;
 
     protected $fillable = [
-        'name', 'email', 'password', 'role', 'phone', 'is_active', 
-        'verification_code', 'verification_code_expires_at'
+        'name', 'email', 'password', 'role', 'phone', 'is_active'
     ];
 
     protected $hidden = [
@@ -23,7 +22,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'verification_code_expires_at' => 'datetime',
         'is_active' => 'boolean',
     ];
 

@@ -13,16 +13,15 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 
-
 class AccountController extends Controller
 {
-
     public function __construct()
     {
+        // Wszystkie metody wymagają logowania
         $this->middleware('auth');
     }
 
-
+    // Panel główny konta
     public function dashboard(): View
     {
         $user = auth()->user();
@@ -34,14 +33,14 @@ class AccountController extends Controller
         return view('account.dashboard', compact('user', 'recentOrders', 'recentOrdersCount', 'wishlistCount', 'addressCount'));
     }
 
-
+    // Formularz edycji profilu
     public function editProfile(): View
     {
         $user = auth()->user();
         return view('account.profile', compact('user'));
     }
 
-
+    // Zapisz zmiany w profilu
     public function updateProfile(UpdateProfileRequest $request): RedirectResponse
     {
         $user = auth()->user();
@@ -51,13 +50,13 @@ class AccountController extends Controller
             ->with('success', 'Profil został zaktualizowany.');
     }
 
-
+    // Formularz zmiany hasła
     public function showPasswordForm(): View
     {
         return view('account.password');
     }
 
-
+    // Zapisz nowe hasło
     public function updatePassword(PasswordUpdateRequest $request): RedirectResponse
     {
         $user = auth()->user();
@@ -69,25 +68,25 @@ class AccountController extends Controller
             ->with('success', 'Hasło zostało zmienione.');
     }
 
-
+    // Lista adresów użytkownika
     public function addresses(): View
     {
         $addresses = auth()->user()->addresses()->orderBy('is_default', 'desc')->get();
         return view('account.addresses', compact('addresses'));
     }
 
-
+    // Formularz dodawania adresu
     public function createAddress(): View
     {
         return view('account.address-form', ['address' => null]);
     }
 
-
+    // Zapisz nowy adres
     public function storeAddress(AddressRequest $request): RedirectResponse
     {
         $user = auth()->user();
         
-        // If this is set as default, reset other addresses
+        // Jeśli to domyślny adres, usuń flagę z innych
         if ($request->is_default) {
             $user->addresses()->update(['is_default' => false]);
         }
@@ -98,10 +97,10 @@ class AccountController extends Controller
             ->with('success', 'Adres został dodany.');
     }
 
-
+    // Formularz edycji adresu
     public function editAddress(Address $address): View|RedirectResponse
     {
-        // Ensure address belongs to authenticated user
+        // Sprawdź czy adres należy do zalogowanego użytkownika
         if ($address->user_id !== auth()->id()) {
             return redirect()->route('account.addresses')
                 ->with('error', 'Nie masz dostępu do tego adresu.');
@@ -110,10 +109,10 @@ class AccountController extends Controller
         return view('account.address-form', compact('address'));
     }
 
-
+    // Zaktualizuj adres
     public function updateAddress(AddressRequest $request, Address $address): RedirectResponse
     {
-        // Ensure address belongs to authenticated user
+        // Sprawdź czy adres należy do zalogowanego użytkownika
         if ($address->user_id !== auth()->id()) {
             return redirect()->route('account.addresses')
                 ->with('error', 'Nie masz dostępu do tego adresu.');
@@ -121,7 +120,7 @@ class AccountController extends Controller
 
         $user = auth()->user();
         
-        // If this is set as default, reset other addresses
+        // Jeśli to domyślny adres, usuń flagę z innych
         if ($request->is_default) {
             $user->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);
         }
@@ -132,10 +131,10 @@ class AccountController extends Controller
             ->with('success', 'Adres został zaktualizowany.');
     }
 
-
+    // Usuń adres
     public function destroyAddress(Address $address): RedirectResponse
     {
-        // Ensure address belongs to authenticated user
+        // Sprawdź czy adres należy do zalogowanego użytkownika
         if ($address->user_id !== auth()->id()) {
             return redirect()->route('account.addresses')
                 ->with('error', 'Nie masz dostępu do tego adresu.');
@@ -147,10 +146,10 @@ class AccountController extends Controller
             ->with('success', 'Adres został usunięty.');
     }
 
-
+    // Ustaw adres jako domyślny
     public function setDefaultAddress(Address $address): RedirectResponse
     {
-        // Ensure address belongs to authenticated user
+        // Sprawdź czy adres należy do zalogowanego użytkownika
         if ($address->user_id !== auth()->id()) {
             return redirect()->route('account.addresses')
                 ->with('error', 'Nie masz dostępu do tego adresu.');
@@ -164,7 +163,7 @@ class AccountController extends Controller
             ->with('success', 'Adres domyślny został zmieniony.');
     }
 
-
+    // Lista zamówień użytkownika
     public function orders(): View
     {
         $orders = auth()->user()->orders()
@@ -175,7 +174,7 @@ class AccountController extends Controller
         return view('account.orders', compact('orders'));
     }
 
-
+    // Szczegóły zamówienia
     public function showOrder(int $orderId): View|RedirectResponse
     {
         $order = auth()->user()->orders()
@@ -190,7 +189,7 @@ class AccountController extends Controller
         return view('account.order-detail', compact('order'));
     }
 
-
+    // Lista życzeń (wishlist)
     public function wishlist(): View
     {
         $wishlist = auth()->user()->wishlist()
@@ -200,7 +199,7 @@ class AccountController extends Controller
         return view('account.wishlist', compact('wishlist'));
     }
 
-
+    // Dodaj produkt do listy życzeń
     public function addToWishlist(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $request->validate([
@@ -210,13 +209,14 @@ class AccountController extends Controller
         $user = auth()->user();
         $productId = $request->product_id;
 
-        // Check if already in wishlist
+        // Sprawdź czy produkt już jest na liście
         $exists = $user->wishlist()->where('product_id', $productId)->exists();
         
         if (!$exists) {
             $user->wishlist()->create(['product_id' => $productId]);
         }
 
+        // Odpowiedź AJAX
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
@@ -225,11 +225,12 @@ class AccountController extends Controller
             ]);
         }
 
+        // Zwykłe przekierowanie
         return redirect()->back()
             ->with('success', 'Produkt został dodany do ulubionych.');
     }
 
-
+    // Usuń produkt z listy życzeń
     public function removeFromWishlist(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $request->validate([
@@ -239,6 +240,7 @@ class AccountController extends Controller
         $user = auth()->user();
         $user->wishlist()->where('product_id', $request->product_id)->delete();
 
+        // Odpowiedź AJAX
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
@@ -247,6 +249,7 @@ class AccountController extends Controller
             ]);
         }
 
+        // Zwykłe przekierowanie
         return redirect()->back()
             ->with('success', 'Produkt został usunięty z ulubionych.');
     }

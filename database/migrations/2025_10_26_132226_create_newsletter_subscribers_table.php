@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('email')->unique();
             $table->boolean('is_active')->default(true);
-            $table->timestamp('subscribed_at');
+            $table->timestamp('subscribed_at')->nullable(); // Dodano nullable
             $table->timestamps();
         });
     }

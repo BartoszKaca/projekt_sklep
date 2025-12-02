@@ -11,7 +11,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\URL;
 
 class RegisterController extends Controller
 {
@@ -27,13 +30,27 @@ class RegisterController extends Controller
     */
 
     use RegistersUsers;
-
     /**
      * Where to redirect users after registration.
      *
      * @var string
-     */
+                // Generate a signed verification URL
+                $verificationUrl = URL::temporarySignedRoute(
+                    'verification.verify',
+                    now()->addMinutes(60),
+                    ['id' => $user->id, 'hash' => sha1($user->email)]
+                );
+
+                Mail::to($user->email)->send(new EmailVerificationMail($user, $verificationUrl));
     protected $redirectTo = '/verify-email';
+
+    /**
+     * Where to redirect users after registration.
+     */
+    protected function redirectPath()
+    {
+        return '/verify-email';
+    }
 
     /**
      * Create a new controller instance.
@@ -43,6 +60,16 @@ class RegisterController extends Controller
     public function __construct()
     {
         $this->middleware('guest');
+    }
+
+    /**
+     * Show the application registration form.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showRegistrationForm()
+    {
+        return view('auth.register');
     }
 
     /**
@@ -76,15 +103,10 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
-        // Generate 6-digit verification code
-        $verificationCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        
         return User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
-            'verification_code' => $verificationCode,
-            'verification_code_expires_at' => now()->addMinutes(15),
         ]);
     }
 
@@ -100,7 +122,8 @@ class RegisterController extends Controller
 
         $user = $this->create($request->all());
 
-        event(new Registered($user));
+        // Don't trigger Laravel's default VerifyEmail notification - we handle it manually
+        // event(new Registered($user));
 
         // Send verification email with code
         $this->sendVerificationEmail($user);
@@ -108,14 +131,15 @@ class RegisterController extends Controller
         // Login user after registration but keep them unverified
         $this->guard()->login($user);
 
-        if ($response = $this->registered($request, $user)) {
-            return $response;
-        }
+        // Regenerate session to prevent fixation attacks
+        \request()->session()->regenerate();
+
+        Log::info('Register: user created', ['id' => $user->id, 'email_verified_at' => $user->email_verified_at]);
 
         return $request->wantsJson()
                     ? response()->json([], 201)
-                    : redirect($this->redirectPath())
-                        ->with('success', 'Konto zostało utworzone! Sprawdź swoją skrzynkę email i wpisz kod weryfikacyjny.');
+                    : redirect('/verify-email')
+                        ->with('success', 'Konto zostało utworzone! Sprawdź swoją skrzynkę email i kliknij link weryfikacyjny.');
     }
 
     /**
@@ -127,9 +151,16 @@ class RegisterController extends Controller
     protected function sendVerificationEmail(User $user)
     {
         try {
-            Mail::to($user->email)->send(new EmailVerificationMail($user, $user->verification_code));
+            // Build signed URL
+            $verificationUrl = URL::temporarySignedRoute(
+                'verification.verify',
+                now()->addMinutes(60),
+                ['id' => $user->id, 'hash' => sha1($user->email)]
+            );
+
+            Mail::to($user->email)->send(new EmailVerificationMail($user, $verificationUrl));
         } catch (\Exception $e) {
-            \Log::error('Failed to send verification email: ' . $e->getMessage());
+            Log::error('Failed to send verification email: ' . $e->getMessage());
         }
     }
 
@@ -140,71 +171,17 @@ class RegisterController extends Controller
      */
     public function showVerificationForm()
     {
-        if (auth()->user()->hasVerifiedEmail()) {
+        $user = Auth::user();
+        Log::info('ShowVerificationForm: User:', ['id' => optional($user)->id, 'email_verified_at' => optional($user)->email_verified_at]);
+
+        if ($user && $user->hasVerifiedEmail()) {
+            Log::info('ShowVerificationForm: User already verified, redirecting to home', ['id' => $user->id]);
             return redirect()->route('home');
         }
 
         return view('auth.verify-email');
     }
 
-    /**
-     * Verify email with code.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function verifyEmail(Request $request)
-    {
-        $request->validate([
-            'code' => ['required', 'string', 'size:6'],
-        ], [
-            'code.required' => 'Kod weryfikacyjny jest wymagany.',
-            'code.size' => 'Kod weryfikacyjny musi mieć 6 cyfr.',
-        ]);
 
-        $user = auth()->user();
-
-        // Check if code is expired
-        if ($user->verification_code_expires_at < now()) {
-            return back()->withErrors(['code' => 'Kod weryfikacyjny wygasł. Kliknij "Wyślij nowy kod"']);
-        }
-
-        // Check if code matches
-        if ($user->verification_code !== $request->code) {
-            return back()->withErrors(['code' => 'Nieprawidłowy kod weryfikacyjny.']);
-        }
-
-        // Mark email as verified
-        $user->email_verified_at = now();
-        $user->verification_code = null;
-        $user->verification_code_expires_at = null;
-        $user->save();
-
-        return redirect()->route('home')->with('success', 'Email został zweryfikowany pomyślnie!');
-    }
-
-    /**
-     * Resend verification code.
-     *
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function resendCode()
-    {
-        $user = auth()->user();
-
-        if ($user->hasVerifiedEmail()) {
-            return redirect()->route('home');
-        }
-
-        // Generate new code
-        $verificationCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $user->verification_code = $verificationCode;
-        $user->verification_code_expires_at = now()->addMinutes(15);
-        $user->save();
-
-        // Send new code
-        $this->sendVerificationEmail($user);
-
-        return back()->with('success', 'Nowy kod weryfikacyjny został wysłany na Twój email.');
-    }
+    // legacy code-based verification methods removed; verification now uses signed URLs
 }

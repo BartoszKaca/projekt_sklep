@@ -136,12 +136,12 @@ class ProductController extends Controller
 
     public function stock(Product $product)
     {
-        $stockMovements = $product->stockMovements()
+        $movements = $product->stockMovements()
             ->with('user')
             ->latest()
             ->paginate(20);
 
-        return view('admin.products.stock', compact('product', 'stockMovements'));
+        return view('admin.products.stock', compact('product', 'movements'));
     }
 
     public function adjustStock(Request $request, Product $product)

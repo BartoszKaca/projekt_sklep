@@ -8,30 +8,32 @@ use App\Models\Product;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 
-
 class HomeController extends Controller
 {
     public function __construct()
     {
-
-        $this->middleware('auth')->except(['index', 'search', 'products']);
+        // Wymaga logowania wszędzie oprócz strony głównej i listy produktów
+        $this->middleware('auth')->except(['index', 'products']);
     }
 
-
+    // Strona główna
     public function index(): View
     {
+        // Pobierz wyróżnione produkty (8 najnowszych)
         $featuredProducts = Product::where('is_active', 1)
             ->where('is_featured', 1)
             ->with(['primaryImage', 'category', 'reviews'])
             ->take(8)
             ->get();
 
+        // Pobierz najnowsze produkty (8 ostatnich)
         $latestProducts = Product::where('is_active', 1)
             ->with(['primaryImage', 'category'])
             ->latest()
             ->take(8)
             ->get();
 
+        // Pobierz aktywne kategorie
         $categories = Category::active()->withCount(['products' => function($q) {
             $q->where('is_active', 1);
         }])->get();
@@ -39,20 +41,21 @@ class HomeController extends Controller
         return view('home', compact('featuredProducts', 'latestProducts', 'categories'));
     }
 
-
+    // Lista wszystkich produktów z filtrami
     public function products(Request $request): View
     {
+        // Początkowe zapytanie - aktywne produkty
         $query = Product::where('is_active', 1)
             ->with(['primaryImage', 'category', 'reviews']);
 
-
+        // Filtr po kategorii
         if ($request->filled('category')) {
             $query->whereHas('category', function($q) use ($request) {
                 $q->where('slug', $request->category);
             });
         }
 
-
+        // Filtr po minimalnej cenie
         if ($request->filled('min_price')) {
             $query->where(function($q) use ($request) {
                 $q->where('price', '>=', $request->min_price)
@@ -60,6 +63,7 @@ class HomeController extends Controller
             });
         }
 
+        // Filtr po maksymalnej cenie
         if ($request->filled('max_price')) {
             $query->where(function($q) use ($request) {
                 $q->where(function($inner) use ($request) {
@@ -72,17 +76,17 @@ class HomeController extends Controller
             });
         }
 
-
+        // Filtr po typie (album/merch)
         if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
 
-
+        // Filtr po formacie (CD/Vinyl/Kaseta)
         if ($request->filled('format')) {
             $query->where('format', $request->format);
         }
 
-
+        // Wyszukiwanie po nazwie, opisie lub artyście
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -92,7 +96,7 @@ class HomeController extends Controller
             });
         }
 
-
+        // Sortowanie wyników
         switch ($request->get('sort', 'newest')) {
             case 'price_asc':
                 $query->orderByRaw('COALESCE(discount_price, price) ASC');
@@ -115,47 +119,18 @@ class HomeController extends Controller
                 break;
         }
 
+        // Paginacja - 20 produktów na stronę
         $products = $query->paginate(20)->withQueryString();
+        
+        // Pobierz kategorie do filtrów
         $categories = Category::active()->get();
 
-
+        // Oblicz zakres cen dla suwaka
         $priceRange = Product::where('is_active', 1)->selectRaw('
             MIN(COALESCE(discount_price, price)) as min_price,
             MAX(COALESCE(discount_price, price)) as max_price
         ')->first();
 
         return view('products.index', compact('products', 'categories', 'priceRange'));
-    }
-
-
-    public function search(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $search = $request->get('q', '');
-        
-        if (strlen($search) < 2) {
-            return response()->json(['products' => []]);
-        }
-
-        $products = Product::where('is_active', 1)
-            ->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('artist', 'like', "%{$search}%");
-            })
-            ->with(['primaryImage', 'category'])
-            ->take(10)
-            ->get()
-            ->map(function($product) {
-                return [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'artist' => $product->artist,
-                    'price' => $product->getFinalPrice(),
-                    'url' => route('products.show', $product->slug),
-                    'image' => $product->primaryImage ? asset('storage/' . $product->primaryImage->path) : null,
-                    'category' => $product->category->name ?? '',
-                ];
-            });
-
-        return response()->json(['products' => $products]);
     }
 }

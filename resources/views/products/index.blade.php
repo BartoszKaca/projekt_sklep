@@ -645,10 +645,7 @@
         alert('Produkt dodany do koszyka!');
     }
 
-    function toggleWishlist(productId) {
-        // TODO: Implementacja listy życzeń
-        console.log('Toggle wishlist:', productId);
-    }
+    // toggleWishlist is defined globally in layout
 </script>
 @endpush
 @endsection

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Log;
+use App\Models\User;
 
 class ForgotPasswordController extends Controller
 {
@@ -26,6 +27,14 @@ class ForgotPasswordController extends Controller
     use SendsPasswordResetEmails;
 
     /**
+     * Create a new controller instance.
+     */
+    public function __construct()
+    {
+        $this->middleware('guest');
+    }
+
+    /**
      * Send a reset link to the given user.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -33,15 +42,20 @@ class ForgotPasswordController extends Controller
      */
     public function sendResetLinkEmail(Request $request)
     {
-        $this->validateEmail($request);
+        // Validate email
+        $request->validate(['email' => 'required|email|max:255'], [
+            'email.required' => 'Adres email jest wymagany.',
+            'email.email' => 'Podaj poprawny adres email.',
+        ]);
 
         try {
-            // Get user by email
-            $user = Password::broker()->getUser(['email' => $request->email]);
+            // Get user by email - directly from database
+            $user = User::where('email', $request->email)->first();
 
             if (!$user) {
+                // For security, return the same message as if user exists
                 return back()
-                    ->withErrors(['email' => 'Nie znaleziono użytkownika z tym adresem email.']);
+                    ->with('status', 'Link do resetowania hasła został wysłany na Twój adres email.');
             }
 
             // Create password reset token
