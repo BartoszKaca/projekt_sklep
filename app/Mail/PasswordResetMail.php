@@ -9,24 +9,21 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-/**
- * Email sent for password reset request.
- */
+
+
 class PasswordResetMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    /**
-     * Create a new message instance.
-     */
+    
+
     public function __construct(
         public string $token,
         public string $email
     ) {}
 
-    /**
-     * Get the message envelope.
-     */
+    
+
     public function envelope(): Envelope
     {
         return new Envelope(
@@ -34,9 +31,8 @@ class PasswordResetMail extends Mailable
         );
     }
 
-    /**
-     * Get the message content definition.
-     */
+    
+
     public function content(): Content
     {
         return new Content(
@@ -47,11 +43,8 @@ class PasswordResetMail extends Mailable
         );
     }
 
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
+    
+
     public function attachments(): array
     {
         return [];

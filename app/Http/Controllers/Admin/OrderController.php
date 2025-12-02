@@ -54,7 +54,8 @@ class OrderController extends Controller
             'payment_status' => $validated['status'] === 'refunded' ? 'refunded' : $order->payment_status,
         ]);
 
-        // Handle specific status transitions
+        
+
         if ($validated['status'] === 'shipped' && $request->filled('tracking_number')) {
             $order->markAsShipped(
                 $request->tracking_number,

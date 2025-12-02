@@ -17,23 +17,16 @@ use Illuminate\Support\Facades\URL;
 
 class TestMailingSystem extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
+    
+
     protected $signature = 'mailing:test {type?}';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
+    
+
     protected $description = 'Test mailing system - wysyła testowe emaile';
 
-    /**
-     * Execute the console command.
-     */
+    
+
     public function handle()
     {
         $type = $this->argument('type');
@@ -86,9 +79,8 @@ class TestMailingSystem extends Command
         return 0;
     }
 
-    /**
-     * Test all email types
-     */
+    
+
     protected function testAll()
     {
         $this->info('Wysyłanie wszystkich typów emaili...');
@@ -109,16 +101,16 @@ class TestMailingSystem extends Command
         $this->testStatusUpdate();
     }
 
-    /**
-     * Test email verification
-     */
+    
+
     protected function testEmailVerification()
     {
         $this->info('📧 Test weryfikacji emailowej...');
 
         $email = $this->ask('Podaj email testowego użytkownika', 'test@example.com');
 
-        // Znajdź lub utwórz użytkownika
+        
+
         $user = User::where('email', $email)->first();
 
         if (!$user) {
@@ -131,14 +123,16 @@ class TestMailingSystem extends Command
             $this->info("Utworzono użytkownika: {$email} (hasło: password123)");
         }
 
-        // Generuj URL weryfikacyjny
+        
+
         $verificationUrl = URL::temporarySignedRoute(
             'verification.verify',
             now()->addMinutes(60),
             ['id' => $user->id, 'hash' => sha1($user->email)]
         );
 
-        // Wyślij email
+        
+
         try {
             Mail::to($user->email)->send(new EmailVerificationMail($user, $verificationUrl));
             $this->info("✓ Email weryfikacyjny wysłany do: {$email}");
@@ -148,9 +142,8 @@ class TestMailingSystem extends Command
         }
     }
 
-    /**
-     * Test password reset
-     */
+    
+
     protected function testPasswordReset()
     {
         $this->info('🔐 Test resetowania hasła...');
@@ -164,10 +157,12 @@ class TestMailingSystem extends Command
             return;
         }
 
-        // Utwórz token
+        
+
         $token = Password::broker()->createToken($user);
 
-        // Wyślij email
+        
+
         try {
             Mail::to($email)->send(new PasswordResetMail($token, $email));
             $this->info("✓ Email resetowania hasła wysłany do: {$email}");
@@ -177,14 +172,14 @@ class TestMailingSystem extends Command
         }
     }
 
-    /**
-     * Test order confirmation
-     */
+    
+
     protected function testOrderConfirmation()
     {
         $this->info('📦 Test potwierdzenia zamówienia...');
 
-        // Pobierz ostatnie zamówienie
+        
+
         $order = Order::with('items', 'shipping')->latest()->first();
 
         if (!$order) {
@@ -200,7 +195,8 @@ class TestMailingSystem extends Command
         $this->line("Zamówienie: {$order->order_number}");
         $this->line("Email: {$order->shipping->email}");
 
-        // Wyślij email
+        
+
         try {
             Mail::to($order->shipping->email)->send(new OrderConfirmationMail($order));
             $this->info("✓ Email potwierdzenia zamówienia wysłany");
@@ -209,14 +205,14 @@ class TestMailingSystem extends Command
         }
     }
 
-    /**
-     * Test payment confirmation
-     */
+    
+
     protected function testPaymentConfirmation()
     {
         $this->info('💳 Test potwierdzenia płatności...');
 
-        // Pobierz ostatnie zamówienie
+        
+
         $order = Order::with('items', 'shipping')->latest()->first();
 
         if (!$order) {
@@ -238,7 +234,8 @@ class TestMailingSystem extends Command
             $this->info('Zamówienie oznaczone jako opłacone.');
             $this->info('Email zostanie wysłany automatycznie przez OrderObserver.');
         } else {
-            // Wyślij email ręcznie
+            
+
             try {
                 Mail::to($order->shipping->email)->send(new PaymentConfirmationMail($order));
                 $this->info("✓ Email potwierdzenia płatności wysłany");
@@ -248,14 +245,14 @@ class TestMailingSystem extends Command
         }
     }
 
-    /**
-     * Test status update
-     */
+    
+
     protected function testStatusUpdate()
     {
         $this->info('🔔 Test aktualizacji statusu...');
 
-        // Pobierz ostatnie zamówienie
+        
+
         $order = Order::with('items', 'shipping')->latest()->first();
 
         if (!$order) {
@@ -285,7 +282,8 @@ class TestMailingSystem extends Command
             $this->info("Status zmieniony na: {$newStatus}");
             $this->info('Email zostanie wysłany automatycznie przez OrderObserver.');
         } else {
-            // Wyślij email ręcznie
+            
+
             try {
                 Mail::to($order->shipping->email)->send(
                     new OrderStatusUpdateMail($order, $oldStatus, $newStatus)

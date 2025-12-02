@@ -66,7 +66,8 @@ class PaymentController extends Controller
                 'merchantPosId' => config('payu.pos_id'),
                 'description' => 'Zamówienie ' . $order->order_number,
                 'currencyCode' => 'PLN',
-                'totalAmount' => (int)($order->total * 100), // Amount in cents
+                'totalAmount' => (int)($order->total * 100), 
+
                 'extOrderId' => $order->order_number,
                 'buyer' => [
                     'email' => $order->shipping->email,

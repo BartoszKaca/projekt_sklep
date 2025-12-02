@@ -14,23 +14,16 @@ use Illuminate\Support\Facades\Mail;
 
 class TestEmailCommand extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
+    
+
     protected $signature = 'mail:test {type} {email}';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
+    
+
     protected $description = 'Test email sending functionality';
 
-    /**
-     * Execute the console command.
-     */
+    
+
     public function handle()
     {
         $type = $this->argument('type');

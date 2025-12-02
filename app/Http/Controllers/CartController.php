@@ -67,7 +67,8 @@ class CartController extends Controller
                 $itemKey = 'v'.$variant->id;
             } else {
                 $price = $product->getFinalPrice() ?? $product->price;
-                $stock = $product->stock ?? null; // if product has stock column
+                $stock = $product->stock ?? null; 
+
                 $itemKey = 'p'.$product->id;
             }
         }

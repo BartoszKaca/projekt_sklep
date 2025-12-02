@@ -10,25 +10,23 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-/**
- * Email sent for email verification after registration.
- */
+
+
 class EmailVerificationMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    /**
-     * Create a new message instance.
-     */
+    
+
     public function __construct(
         public User $user,
-        // Payload can be a 6-digit code or a signed URL — we detect at runtime in the view.
+        
+
         public ?string $verificationPayload = null
     ) {}
 
-    /**
-     * Get the message envelope.
-     */
+    
+
     public function envelope(): Envelope
     {
         return new Envelope(
@@ -36,9 +34,8 @@ class EmailVerificationMail extends Mailable
         );
     }
 
-    /**
-     * Get the message content definition.
-     */
+    
+
     public function content(): Content
     {
         return new Content(
@@ -46,11 +43,8 @@ class EmailVerificationMail extends Mailable
         );
     }
 
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
+    
+
     public function attachments(): array
     {
         return [];

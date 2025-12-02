@@ -123,7 +123,8 @@ class CheckoutController extends Controller
         try {
             DB::beginTransaction();
 
-            // Validate stock availability before processing
+            
+
             foreach ($cart['items'] as $item) {
                 $product = Product::lockForUpdate()->find($item['product_id']);
                 if (!$product) {
@@ -145,13 +146,16 @@ class CheckoutController extends Controller
                 }
             }
 
-            // Calculate totals
+            
+
             $subtotal = $cart['total'];
             $shippingCost = $this->shippingCosts[$request->shipping_method] ?? $this->shippingCosts['standard'];
-            $tax = 0; // VAT included in prices
+            $tax = 0; 
+
             $discount = 0;
 
-            // Apply coupon if present
+            
+
             $couponCode = session('applied_coupon');
             if ($couponCode) {
                 $coupon = Coupon::where('code', $couponCode)->first();
@@ -163,7 +167,8 @@ class CheckoutController extends Controller
 
             $total = $subtotal + $shippingCost + $tax - $discount;
 
-            // Create order
+            
+
             $order = Order::create([
                 'order_number' => Order::generateOrderNumber(),
                 'user_id' => auth()->id(),
@@ -179,7 +184,8 @@ class CheckoutController extends Controller
                 'customer_notes' => $request->customer_notes,
             ]);
 
-            // Create shipping info
+            
+
             OrderShipping::create([
                 'order_id' => $order->id,
                 'first_name' => $request->first_name,
@@ -193,7 +199,8 @@ class CheckoutController extends Controller
                 'email' => $request->email,
             ]);
 
-            // Create order items and update stock
+            
+
             foreach ($cart['items'] as $key => $item) {
                 $product = Product::find($item['product_id']);
                 if (!$product) {
@@ -217,7 +224,8 @@ class CheckoutController extends Controller
                     'total' => $item['price'] * $item['quantity'],
                 ]);
 
-                // Decrease stock
+                
+
                 if ($variant) {
                     if ($variant->stock !== null) {
                         $variant->decrement('stock', $item['quantity']);
@@ -229,19 +237,23 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            // Clear cart and coupon
+            
+
             session()->forget('cart');
             session()->forget('applied_coupon');
 
-            // Send confirmation email
+            
+
             try {
                 Mail::to($request->email)->send(new OrderConfirmationMail($order));
             } catch (\Exception $e) {
-                // Log email error but don't fail the order
+                
+
                 Log::error('Failed to send order confirmation email: ' . $e->getMessage());
             }
 
-            // Redirect based on payment method
+            
+
             if ($request->payment_method === 'payu') {
                 return redirect()->route('payment.process', ['order' => $order->id]);
             }
@@ -261,7 +273,8 @@ class CheckoutController extends Controller
 
     public function success(Order $order): View|RedirectResponse
     {
-        // Verify order belongs to current user (if logged in) or is accessible
+        
+
         if (auth()->check() && $order->user_id && $order->user_id !== auth()->id()) {
             return redirect()->route('home')
                 ->with('error', 'Nie masz dostępu do tego zamówienia.');

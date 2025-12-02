@@ -16,7 +16,8 @@ class ReportController extends Controller
         $startDate = $request->input('start_date', now()->subMonth());
         $endDate = $request->input('end_date', now());
 
-        // Sprzedaż według dni
+        
+
         $dailySales = Order::where('payment_status', 'paid')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as orders, SUM(total) as revenue')
@@ -24,7 +25,8 @@ class ReportController extends Controller
             ->orderBy('date')
             ->get();
 
-        // Top produkty
+        
+
         $topProducts = OrderItem::select('product_id', 'product_name')
             ->selectRaw('SUM(quantity) as total_sold, SUM(total) as revenue')
             ->whereHas('order', function($q) use ($startDate, $endDate) {
@@ -36,7 +38,8 @@ class ReportController extends Controller
             ->take(10)
             ->get();
 
-        // Statystyki
+        
+
         $stats = [
             'total_revenue' => Order::where('payment_status', 'paid')
                 ->whereBetween('created_at', [$startDate, $endDate])

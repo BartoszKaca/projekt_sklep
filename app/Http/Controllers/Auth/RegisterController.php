@@ -18,66 +18,33 @@ use Illuminate\Support\Facades\URL;
 
 class RegisterController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | Register Controller
-    |--------------------------------------------------------------------------
-    |
-    | This controller handles the registration of new users as well as their
-    | validation and creation. By default this controller uses a trait to
-    | provide this functionality without requiring any additional code.
-    |
-    */
+    
+
 
     use RegistersUsers;
-    /**
-     * Where to redirect users after registration.
-     *
-     * @var string
-                // Generate a signed verification URL
-                $verificationUrl = URL::temporarySignedRoute(
-                    'verification.verify',
-                    now()->addMinutes(60),
-                    ['id' => $user->id, 'hash' => sha1($user->email)]
-                );
+    
 
-                Mail::to($user->email)->send(new EmailVerificationMail($user, $verificationUrl));
-    protected $redirectTo = '/verify-email';
-
-    /**
-     * Where to redirect users after registration.
-     */
     protected function redirectPath()
     {
         return '/verify-email';
     }
 
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
+    
+
     public function __construct()
     {
         $this->middleware('guest');
     }
 
-    /**
-     * Show the application registration form.
-     *
-     * @return \Illuminate\View\View
-     */
+    
+
     public function showRegistrationForm()
     {
         return view('auth.register');
     }
 
-    /**
-     * Get a validator for an incoming registration request.
-     *
-     * @param  array  $data
-     * @return \Illuminate\Contracts\Validation\Validator
-     */
+    
+
     protected function validator(array $data)
     {
         return Validator::make($data, [
@@ -95,12 +62,8 @@ class RegisterController extends Controller
         ]);
     }
 
-    /**
-     * Create a new user instance after a valid registration.
-     *
-     * @param  array  $data
-     * @return \App\Models\User
-     */
+    
+
     protected function create(array $data)
     {
         return User::create([
@@ -110,28 +73,29 @@ class RegisterController extends Controller
         ]);
     }
 
-    /**
-     * Handle a registration request for the application.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
-     */
+    
+
     public function register(Request $request)
     {
         $this->validator($request->all())->validate();
 
         $user = $this->create($request->all());
 
-        // Don't trigger Laravel's default VerifyEmail notification - we handle it manually
-        // event(new Registered($user));
+        
 
-        // Send verification email with code
+        
+
+
+        
+
         $this->sendVerificationEmail($user);
 
-        // Login user after registration but keep them unverified
+        
+
         $this->guard()->login($user);
 
-        // Regenerate session to prevent fixation attacks
+        
+
         \request()->session()->regenerate();
 
         Log::info('Register: user created', ['id' => $user->id, 'email_verified_at' => $user->email_verified_at]);
@@ -142,16 +106,13 @@ class RegisterController extends Controller
                         ->with('success', 'Konto zostało utworzone! Sprawdź swoją skrzynkę email i kliknij link weryfikacyjny.');
     }
 
-    /**
-     * Send email verification code to user.
-     *
-     * @param  \App\Models\User  $user
-     * @return void
-     */
+    
+
     protected function sendVerificationEmail(User $user)
     {
         try {
-            // Build signed URL
+            
+
             $verificationUrl = URL::temporarySignedRoute(
                 'verification.verify',
                 now()->addMinutes(60),
@@ -164,11 +125,8 @@ class RegisterController extends Controller
         }
     }
 
-    /**
-     * Show email verification form.
-     *
-     * @return \Illuminate\View\View
-     */
+    
+
     public function showVerificationForm()
     {
         $user = Auth::user();
@@ -183,5 +141,6 @@ class RegisterController extends Controller
     }
 
 
-    // legacy code-based verification methods removed; verification now uses signed URLs
+    
+
 }

@@ -6,22 +6,16 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Middleware for guest checkout functionality.
- * Allows both authenticated users and guests to proceed with checkout.
- */
+
+
 class GuestCheckoutMiddleware
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param Request $request
-     * @param Closure $next
-     * @return Response
-     */
+    
+
     public function handle(Request $request, Closure $next): Response
     {
-        // Check if cart is empty
+        
+
         $cart = session('cart', ['items' => [], 'total' => 0]);
 
         if (empty($cart['items'])) {
@@ -29,7 +23,8 @@ class GuestCheckoutMiddleware
                 ->with('error', 'Twój koszyk jest pusty.');
         }
 
-        // If user is authenticated, check if email is verified
+        
+
         if ($request->user() && 
             $request->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail &&
             !$request->user()->hasVerifiedEmail()) {

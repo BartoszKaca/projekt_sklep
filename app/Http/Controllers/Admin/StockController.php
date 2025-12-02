@@ -37,7 +37,8 @@ class StockController extends Controller
 
     public function export()
     {
-        // Implementacja eksportu do CSV/Excel
+        
+
         $products = Product::with('category')->get();
 
         $filename = 'stock_report_' . date('Y-m-d') . '.csv';

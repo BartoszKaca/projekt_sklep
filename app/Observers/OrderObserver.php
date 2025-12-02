@@ -10,39 +10,42 @@ use Illuminate\Support\Facades\Mail;
 
 class OrderObserver
 {
-    /**
-     * Handle the Order "updating" event.
-     */
+    
+
     public function updating(Order $order): void
     {
-        // Track status changes
+        
+
         if ($order->isDirty('status')) {
             $oldStatus = $order->getOriginal('status');
             $newStatus = $order->status;
 
-            // Store in attributes for use in updated event
+            
+
             $order->_oldStatus = $oldStatus;
             $order->_statusChanged = true;
         }
 
-        // Track payment status changes
+        
+
         if ($order->isDirty('payment_status')) {
             $oldPaymentStatus = $order->getOriginal('payment_status');
             $newPaymentStatus = $order->payment_status;
 
-            // If payment status changed to 'paid', mark for payment confirmation email
+            
+
             if ($oldPaymentStatus !== 'paid' && $newPaymentStatus === 'paid') {
                 $order->_paymentConfirmed = true;
             }
         }
     }
 
-    /**
-     * Handle the Order "updated" event.
-     */
+    
+
     public function updated(Order $order): void
     {
-        // Send status update email
+        
+
         if (isset($order->_statusChanged) && $order->_statusChanged && $order->shipping) {
             try {
                 Mail::to($order->shipping->email)->send(
@@ -53,7 +56,8 @@ class OrderObserver
             }
         }
 
-        // Send payment confirmation email
+        
+
         if (isset($order->_paymentConfirmed) && $order->_paymentConfirmed && $order->shipping) {
             try {
                 Mail::to($order->shipping->email)->send(
