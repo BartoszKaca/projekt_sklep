@@ -530,7 +530,7 @@
                     @elseif($product->created_at->gt(now()->subDays(7)))
                     <span class="product-badge new">Nowość</span>
                     @endif
-
+                      <a href="{{ route('products.show', $product->slug) }}" class="product-image-link">
                     <div class="product-image">
                         @if($product->primaryImage)
                         <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
@@ -547,6 +547,7 @@
                             </button>
                         </div>
                     </div>
+                        </a>
 
                     <div class="product-info">
                         <div class="product-category">{{ $product->category->name }}</div>

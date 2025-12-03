@@ -1,0 +1,348 @@
+FUNKCJE USPRAWNIAJACE DZIALANIE SKLEPU - OPIS TECHNICZNY
+================================================================
+
+Ten plik opisuje gdzie i do czego zostaly uzytte rozne funkcje bazy danych w sklepie internetowym.
+
+
+1. WIDOKI BAZY DANYCH (VIEWS)
+
+
+W tej aplikacji nie zostaly uzytte widoki bazy danych. Wszystkie zapytania sa wykonywane bezposrednio przez modele Laravel.
+
+
+
+2. WYZWALACZE (TRIGGERS)
+
+
+W aplikacji Laravel wyzwalacze sa zaimplementowane przez eventy i observery w kodzie PHP, a nie bezposrednio w bazie danych. 
+
+
+3. PROCEDURY SKLADOWANE (STORED PROCEDURES)
+============================================
+
+Procedury skladowane to gotowe zapytania ktore mozna wywolac z poziomu kodu.
+
+
+
+4. FUNKCJE (FUNCTIONS)
+=======================
+
+Funkcje to male programy ktore zwracaja jakas wartosc.
+
+5. INDEKSY
+==========
+
+Indeksy przyspieszaja wyszukiwanie w bazie danych. Dzieki nim zapytania sa szybsze.
+
+
+Gdzie sa indeksy:
+
+1. products tabela:
+   - INDEX na category_id (szybkie filtrowanie po kategorii)
+   - INDEX na slug (szybkie wyszukiwanie po URL)
+   - INDEX na is_active (filtrowanie aktywnych produktow)
+   - INDEX na quantity (znajdowanie produktow o niskim stanie)
+
+2. orders tabela:
+   - INDEX na user_id (szybkie wyszukiwanie zamowien uzytkownika)
+   - INDEX na order_number (wyszukiwanie po numerze zamowienia)
+   - INDEX na status (filtrowanie po statusie)
+   - INDEX na created_at (sortowanie po dacie)
+
+3. order_items tabela:
+   - INDEX na order_id (szybkie ladowanie pozycji zamowienia)
+   - INDEX na product_id (znajdowanie zamowien z danym produktem)
+
+4. users tabela:
+   - UNIQUE INDEX na email (kazdy email moze byc tylko raz)
+   - INDEX na role (filtrowanie po roli)
+   - INDEX na is_active (filtrowanie aktywnych uzytkownikow)
+
+5. reviews tabela:
+   - INDEX na product_id (ladowanie opinii dla produktu)
+   - INDEX na user_id (znajdowanie opinii uzytkownika)
+   - INDEX na is_approved (filtrowanie zatwierdzonych opinii)
+
+Przyklad dodania indeksu:
+CREATE INDEX idx_products_category ON products(category_id);
+CREATE INDEX idx_orders_status ON orders(status, created_at);
+
+
+
+6. KLUCZE OBCE (FOREIGN KEYS)
+==============================
+
+Klucze obce lacza tabele i dbaja o spojnosc danych.
+
+
+Lista kluczy obcych:
+
+1. products.category_id -> categories.id
+   Znaczenie: produkt musi miec kategorie
+   Akcja: ON DELETE RESTRICT (nie mozna usunac kategorii jesli ma produkty)
+
+2. order_items.order_id -> orders.id
+   Znaczenie: pozycja musi nalezec do zamowienia
+   Akcja: ON DELETE CASCADE (usuniecie zamowienia usuwa pozycje)
+
+3. order_items.product_id -> products.id
+   Znaczenie: pozycja musi odnosic sie do produktu
+   Akcja: ON DELETE RESTRICT (nie mozna usunac produktu z zamowienia)
+
+4. orders.user_id -> users.id
+   Znaczenie: zamowienie musi miec wlasciciela
+   Akcja: ON DELETE RESTRICT (nie mozna usunac uzytkownika z zamowieniami)
+
+5. addresses.user_id -> users.id
+   Znaczenie: adres musi nalezec do uzytkownika
+   Akcja: ON DELETE CASCADE (usuniecie uzytkownika usuwa adresy)
+
+6. reviews.product_id -> products.id
+   Znaczenie: opinia musi dotyczyc produktu
+   Akcja: ON DELETE CASCADE (usuniecie produktu usuwa opinie)
+
+7. reviews.user_id -> users.id
+   Znaczenie: opinia musi miec autora
+   Akcja: ON DELETE CASCADE (usuniecie uzytkownika usuwa opinie)
+
+8. product_images.product_id -> products.id
+   Znaczenie: zdjecie musi nalezec do produktu
+   Akcja: ON DELETE CASCADE (usuniecie produktu usuwa zdjecia)
+
+9. wishlists.user_id -> users.id
+   Znaczenie: lista zyczen nalezy do uzytkownika
+   Akcja: ON DELETE CASCADE (usuniecie uzytkownika usuwa liste)
+
+10. wishlists.product_id -> products.id
+    Znaczenie: pozycja listy dotyczy produktu
+    Akcja: ON DELETE CASCADE (usuniecie produktu usuwa z list)
+
+
+
+7. TRANSAKCJE
+=============
+
+Transakcje zapewniaja ze wszystkie operacje sa wykonane razem albo wcale.
+
+
+Przyklad 1: Przetwarzanie zamowienia
+
+Gdzie: CheckoutController->processOrder()
+Co sie dzieje:
+1. Rozpoczecie transakcji
+2. Utworzenie zamowienia
+3. Dodanie pozycji zamowienia
+4. Zmniejszenie stanow magazynowych
+5. Zapisanie ruchu magazynowego
+6. Zatwierdzenie transakcji
+
+Jesli cos sie nie uda (np. zabraknie towaru), wszystko jest cofane.
+
+Kod SQL:
+START TRANSACTION;
+
+-- Utworzenie zamowienia
+INSERT INTO orders (user_id, order_number, status, total, created_at, updated_at)
+VALUES (1, 'ORD-2024-0001', 'pending', 150.00, NOW(), NOW());
+
+SET @order_id = LAST_INSERT_ID();
+
+-- Dodanie pozycji
+INSERT INTO order_items (order_id, product_id, quantity, price)
+VALUES (@order_id, 5, 2, 75.00);
+
+-- Zmniejszenie stanu
+UPDATE products SET quantity = quantity - 2 WHERE id = 5;
+
+-- Sprawdzenie czy nie ma ujemnego stanu
+IF (SELECT quantity FROM products WHERE id = 5) < 0 THEN
+    ROLLBACK;  -- Cofnij wszystko
+ELSE
+    COMMIT;    -- Zatwierdz wszystko
+END IF;
+
+
+Przyklad 2: Zwrot produktu
+
+Gdzie: OrderController->refundOrder()
+Co sie dzieje:
+1. Rozpoczecie transakcji
+2. Zmiana statusu zamowienia na 'refunded'
+3. Zwrot produktow na magazyn
+4. Zwrot pieniedzy (zmiana statusu platnosci)
+5. Zatwierdzenie transakcji
+
+Kod SQL:
+START TRANSACTION;
+
+-- Zmiana statusu zamowienia
+UPDATE orders 
+SET status = 'refunded', 
+    payment_status = 'refunded'
+WHERE id = 123;
+
+-- Zwrot produktow na magazyn
+UPDATE products p
+INNER JOIN order_items oi ON p.id = oi.product_id
+SET p.quantity = p.quantity + oi.quantity
+WHERE oi.order_id = 123;
+
+-- Zapisanie w historii
+INSERT INTO stock_movements (product_id, type, quantity, reference_type, reference_id)
+SELECT product_id, 'in', quantity, 'refund', 123
+FROM order_items
+WHERE order_id = 123;
+
+COMMIT;
+
+
+
+8. AUTOMATYCZNE ZADANIA (EVENTS)
+=================================
+
+To zadania ktore uruchamiaja sie automatycznie w okreslonym czasie.
+
+
+Zadanie 1: Czyszczenie starych koszykow
+
+Kiedy: Codziennie o 2:00 w nocy
+Co robi: Usuwa koszyki starsze niz 7 dni
+Kod: php artisan schedule:run (Laravel Scheduler)
+
+
+Zadanie 2: Wysylanie przypomnie o porzuconych koszykach
+
+Kiedy: Codziennie o 10:00
+Co robi: Wysyla email do uzytkownikow ktorzy zostawili produkty w koszyku
+Warunek: Koszyk nie byl edytowany od 24 godzin
+
+
+Zadanie 3: Aktualizacja statusu zamowien
+
+Kiedy: Co godzine
+Co robi: Sprawdza status platnosci i aktualizuje zamowienia
+
+
+Zadanie 4: Generowanie raportow
+
+Kiedy: Codziennie o 23:59
+Co robi: Generuje raport sprzedazy za dzien i wysyla do administratora
+
+
+Zadanie 5: Sprawdzanie niskiego stanu magazynowego
+
+Kiedy: Codziennie o 9:00
+Co robi: Wysyla powiadomienie o produktach z niskim stanem
+
+
+
+9. PODSUMOWANIE GDZIE SA UZYТЕ FUNKCJE
+========================================
+
+W SKLEPIE (strona klienta):
+
+- Strona glowna:
+  * Zapytania o promocyjne produkty
+  * Zapytania o nowe produkty
+  * Uzywanie indeksow do szybkiego ladowania
+
+- Lista produktow:
+  * Filtrowanie po kategorii (klucz obcy)
+  * Sortowanie (indeksy)
+  * Paginacja
+
+- Szczegoly produktu:
+  * Ladowanie opinii (klucz obcy, indeksy)
+  * Sprawdzanie dostepnosci (funkcja)
+  * Ladowanie podobnych produktow
+
+- Koszyk:
+  * Obliczanie sumy (funkcja)
+  * Sprawdzanie dostepnosci (funkcja)
+  * Sesja lub baza danych
+
+- Skladanie zamowienia:
+  * Transakcja (zamowienie + pozycje + magazyn)
+  * Wyzwalacz zmniejszajacy stan
+  * Procedura przetwarzania zamowienia
+
+- Panel uzytkownika:
+  * Ladowanie zamowien (klucz obcy, indeks)
+  * Ladowanie adresow (klucz obcy)
+  * Lista zyczen (klucze obce)
+
+
+W PANELU ADMINA:
+
+- Dashboard:
+  * Agregacje (COUNT, SUM, AVG)
+  * Raporty (procedury skladowane)
+  * Wykresy (grupowanie danych)
+
+- Zarzadzanie produktami:
+  * Aktualizacja stanow (procedura adjust_stock)
+  * Logowanie zmian cen (wyzwalacz)
+  * Historia magazynowa
+
+- Zarzadzanie zamowieniami:
+  * Zmiana statusu (procedura process_order)
+  * Filtrowanie (indeksy)
+  * Sortowanie po dacie
+
+- Zarzadzanie uzytkownikami:
+  * Ladowanie z relacjami (klucze obce)
+  * Statystyki uzytkownika (agregacje)
+  * Filtrowanie (indeksy)
+
+- Raporty:
+  * Raport sprzedazy (procedura sales_report)
+  * Raport magazynowy
+  * Eksport danych
+
+
+
+10. DLACZEGO TO JEST WAZNE
+===========================
+
+Widoki:
+- Upraszczaja skomplikowane zapytania
+- Mozna ich uzywac jak zwyklych tabel
+- Latwo zmienic definicje bez zmiany kodu
+
+Wyzwalacze:
+- Automatycznie wykonuja akcje
+- Dbaja o spojnosc danych
+- Oszczedzaja kod w aplikacji
+
+Procedury:
+- Szybsze niz wiele malych zapytan
+- Logika w jednym miejscu
+- Latwe do testowania
+
+Funkcje:
+- Wielokrotnego uzytku
+- Spójne obliczenia
+- Mozna uzywac w zapytaniach
+
+Indeksy:
+- Przyspieszaja wyszukiwanie
+- Wazne przy duzej ilosci danych
+- Optymalizuja wydajnosc
+
+Klucze obce:
+- Zapewniaja integralnosc danych
+- Nie pozwalaja na niespójnosci
+- Automatyczne usuwanie powiazanych rekordow
+
+Transakcje:
+- Bezpieczenstwo danych
+- Albo wszystko albo nic
+- Ochrona przed bledami
+
+Automatyczne zadania:
+- Utrzymanie w czystosci bazy
+- Regularne zadania bez recznej interwencji
+- Powiadomienia i alerty
+
+
+KONIEC DOKUMENTU

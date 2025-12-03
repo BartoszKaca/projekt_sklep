@@ -22,38 +22,36 @@ class NewsletterController extends Controller
 
         $email = $request->email;
 
-        
-
         $existing = NewsletterSubscriber::where('email', $email)->first();
+        $isNew = !$existing;
 
         if ($existing) {
             if ($existing->is_active) {
                 $message = 'Ten adres email jest już zapisany do newslettera.';
+                $shouldSendEmail = false;
             } else {
-                
-
                 $existing->update([
                     'is_active' => true,
                     'subscribed_at' => now()
                 ]);
                 $message = 'Twoja subskrypcja została reaktywowana.';
+                $shouldSendEmail = true;
             }
         } else {
-            
-
             NewsletterSubscriber::create([
                 'email' => $email,
                 'is_active' => true,
                 'subscribed_at' => now(),
             ]);
             $message = 'Dziękujemy za zapisanie do newslettera!';
+            $shouldSendEmail = true;
+        }
 
-            
-
+        if ($shouldSendEmail) {
             try {
                 Mail::to($email)->send(new NewsletterSubscriptionMail($email));
             } catch (\Exception $e) {
-                Log::error('Błąd wysyłki emaila: ' . $e->getMessage());
+                Log::error('Błąd wysyłki emaila newslettera: ' . $e->getMessage());
             }
         }
 
@@ -82,13 +80,11 @@ class NewsletterController extends Controller
         $subscriber = NewsletterSubscriber::where('email', $request->email)->first();
 
         if ($subscriber) {
-            $subscriber->update(['is_active' => false]);
+            $subscriber->update(['is_active' => false, 'unsubscribed_at' => now()]);
             $message = 'Zostałeś wypisany z newslettera.';
         } else {
             $message = 'Podany adres email nie jest zapisany do newslettera.';
         }
-
-        
 
         if ($request->ajax()) {
             return response()->json([
@@ -96,8 +92,6 @@ class NewsletterController extends Controller
                 'message' => $message,
             ]);
         }
-
-        
 
         return redirect()->back()->with('success', $message);
     }

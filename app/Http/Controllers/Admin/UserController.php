@@ -13,18 +13,43 @@ class UserController extends Controller
     {
         $query = User::query();
 
+        
         if ($request->filled('role')) {
             $query->where('role', $request->role);
         }
 
+        
+        if ($request->filled('status')) {
+            $isActive = $request->status === 'active';
+            $query->where('is_active', $isActive);
+        }
+
+        
         if ($request->filled('search')) {
             $query->where(function($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%');
+                  ->orWhere('email', 'like', '%' . $request->search . '%')
+                  ->orWhere('phone', 'like', '%' . $request->search . '%');
             });
         }
 
-        $users = $query->withCount('orders')->latest()->paginate(20);
+        
+        switch ($request->get('sort', 'newest')) {
+            case 'oldest':
+                $query->oldest();
+                break;
+            case 'name':
+                $query->orderBy('name');
+                break;
+            case 'orders':
+                $query->withCount('orders')->orderBy('orders_count', 'desc');
+                break;
+            default: // newest
+                $query->latest();
+                break;
+        }
+
+        $users = $query->with(['orders', 'reviews'])->paginate(20);
 
         return view('admin.users.index', compact('users'));
     }
@@ -45,11 +70,41 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email,' . $user->id,
             'role' => 'required|in:admin,customer',
             'phone' => 'nullable|string',
-            'is_active' => 'boolean',
         ]);
+
+        
+        $validated['is_active'] = $request->has('is_active');
 
         $user->update($validated);
 
         return back()->with('success', 'Użytkownik został zaktualizowany!');
+    }
+
+    public function destroy(User $user)
+    {
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'Nie możesz usunąć swojego własnego konta!');
+        }
+
+        $userName = $user->name;
+        $user->delete();
+
+        return redirect()->route('admin.users.index')
+            ->with('success', "Użytkownik {$userName} został usunięty!");
+    }
+
+    public function toggleStatus(User $user)
+    {
+        // Prevent deactivating yourself
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'Nie możesz dezaktywować swojego własnego konta!');
+        }
+
+        $user->update([
+            'is_active' => !$user->is_active
+        ]);
+
+        $status = $user->is_active ? 'aktywowany' : 'dezaktywowany';
+        return back()->with('success', "Użytkownik {$user->name} został {$status}!");
     }
 }

@@ -59,6 +59,7 @@
         color: var(--gray);
         font-size: 0.875rem;
         margin-bottom: 0.5rem;
+        flex-wrap: wrap;
     }
 
     .user-meta i {
@@ -108,6 +109,68 @@
         background: var(--light-gray);
         color: var(--dark);
     }
+
+    .action-btns {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .action-btns .btn {
+        white-space: nowrap;
+    }
+
+    .stats-overview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+
+    .stat-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat-card-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-card-label {
+        color: var(--gray);
+        font-size: 0.875rem;
+    }
+
+    @media (max-width: 768px) {
+        .user-card {
+            grid-template-columns: 1fr;
+        }
+
+        .user-avatar-large {
+            width: 60px;
+            height: 60px;
+            font-size: 1.5rem;
+        }
+
+        .action-btns {
+            flex-direction: row;
+        }
+    }
 </style>
 @endpush
 
@@ -122,12 +185,47 @@
     <p class="page-subtitle">Zarządzaj kontami klientów i administratorów</p>
 </div>
 
+<!-- Statistics Overview -->
+<div class="stats-overview">
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background: #dbeafe; color: #1e40af;">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-card-value">{{ $users->total() }}</div>
+        <div class="stat-card-label">Wszystkich użytkowników</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background: #fef3c7; color: #92400e;">
+            <i class="fas fa-user-shield"></i>
+        </div>
+        <div class="stat-card-value">{{ $users->where('role', 'admin')->count() }}</div>
+        <div class="stat-card-label">Administratorów</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background: #d1fae5; color: #065f46;">
+            <i class="fas fa-user"></i>
+        </div>
+        <div class="stat-card-value">{{ $users->where('role', 'customer')->count() }}</div>
+        <div class="stat-card-label">Klientów</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background: #e0e7ff; color: #3730a3;">
+            <i class="fas fa-user-check"></i>
+        </div>
+        <div class="stat-card-value">{{ $users->where('is_active', true)->count() }}</div>
+        <div class="stat-card-label">Aktywnych</div>
+    </div>
+</div>
+
 <!-- Filters -->
 <form method="GET" class="users-filters">
     <div class="filter-group" style="flex: 1; min-width: 250px;">
         <label class="filter-label">Szukaj</label>
         <input type="text" name="search" class="filter-input" 
-               placeholder="Imię, email..." value="{{ request('search') }}">
+               placeholder="Imię, email, telefon..." value="{{ request('search') }}">
     </div>
 
     <div class="filter-group">
@@ -140,12 +238,54 @@
     </div>
 
     <div class="filter-group">
+        <label class="filter-label">Status</label>
+        <select name="status" class="filter-select">
+            <option value="">Wszystkie statusy</option>
+            <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Aktywny</option>
+            <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Nieaktywny</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Sortuj</label>
+        <select name="sort" class="filter-select">
+            <option value="newest" {{ request('sort') == 'newest' ? 'selected' : '' }}>Najnowsi</option>
+            <option value="oldest" {{ request('sort') == 'oldest' ? 'selected' : '' }}>Najstarsi</option>
+            <option value="name" {{ request('sort') == 'name' ? 'selected' : '' }}>Nazwa A-Z</option>
+            <option value="orders" {{ request('sort') == 'orders' ? 'selected' : '' }}>Najwięcej zamówień</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
         <label class="filter-label">&nbsp;</label>
         <button type="submit" class="btn btn-primary">
             <i class="fas fa-search"></i> Filtruj
         </button>
     </div>
+
+    @if(request()->anyFilled(['search', 'role', 'status', 'sort']))
+    <div class="filter-group">
+        <label class="filter-label">&nbsp;</label>
+        <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Wyczyść
+        </a>
+    </div>
+    @endif
 </form>
+
+@if(session('success'))
+<div style="background: #d1fae5; color: #065f46; padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+    <i class="fas fa-check-circle"></i>
+    <span>{{ session('success') }}</span>
+</div>
+@endif
+
+@if(session('error'))
+<div style="background: #fee2e2; color: #991b1b; padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+    <i class="fas fa-exclamation-circle"></i>
+    <span>{{ session('error') }}</span>
+</div>
+@endif
 
 <!-- Users List -->
 @forelse($users as $user)
@@ -165,7 +305,7 @@
             <span><i class="fas fa-calendar"></i> Dołączył {{ $user->created_at->format('d.m.Y') }}</span>
         </div>
 
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <span class="role-badge {{ $user->role }}">
                 <i class="fas fa-{{ $user->role == 'admin' ? 'user-shield' : 'user' }}"></i>
                 {{ $user->role == 'admin' ? 'Administrator' : 'Klient' }}
@@ -174,6 +314,12 @@
             <span class="badge {{ $user->is_active ? 'badge-success' : 'badge-danger' }}">
                 {{ $user->is_active ? 'Aktywny' : 'Nieaktywny' }}
             </span>
+
+            @if($user->email_verified_at)
+            <span class="badge badge-info">
+                <i class="fas fa-check-circle"></i> Zweryfikowany
+            </span>
+            @endif
         </div>
 
         <div class="user-stats">
@@ -192,369 +338,48 @@
         </div>
     </div>
 
-    <div class="action-btns" style="flex-direction: column;">
-        <a href="{{ route('admin.users.show', $user) }}" class="btn btn-primary" style="white-space: nowrap;">
+    <div class="action-btns">
+        <a href="{{ route('admin.users.show', $user) }}" class="btn btn-primary">
             <i class="fas fa-eye"></i> Zobacz profil
         </a>
+        
+        @if($user->is_active)
+        <form method="POST" action="{{ route('admin.users.toggle-status', $user) }}" style="display: inline;">
+            @csrf
+            @method('PATCH')
+            <button type="submit" class="btn btn-warning" onclick="return confirm('Czy na pewno chcesz dezaktywować tego użytkownika?');">
+                <i class="fas fa-ban"></i> Dezaktywuj
+            </button>
+        </form>
+        @else
+        <form method="POST" action="{{ route('admin.users.toggle-status', $user) }}" style="display: inline;">
+            @csrf
+            @method('PATCH')
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-check"></i> Aktywuj
+            </button>
+        </form>
+        @endif
     </div>
 </div>
 @empty
-<div class="empty-state" style="background: white; padding: 4rem; border-radius: 16px;">
-    <i class="fas fa-users"></i>
+<div class="empty-state" style="background: white; padding: 4rem; border-radius: 16px; text-align: center;">
+    <i class="fas fa-users" style="font-size: 4rem; color: var(--gray); opacity: 0.3; margin-bottom: 1.5rem;"></i>
     <h3>Brak użytkowników</h3>
-    <p>Nie znaleziono użytkowników pasujących do kryteriów</p>
+    <p style="color: var(--gray);">Nie znaleziono użytkowników pasujących do kryteriów</p>
+    
+    @if(request()->anyFilled(['search', 'role', 'status']))
+    <a href="{{ route('admin.users.index') }}" class="btn btn-primary" style="margin-top: 1.5rem;">
+        <i class="fas fa-arrow-left"></i> Wyczyść filtry
+    </a>
+    @endif
 </div>
 @endforelse
 
 <!-- Pagination -->
 @if($users->hasPages())
 <div style="display: flex; justify-content: center; margin-top: 2rem;">
-    {{ $users->links() }}
+    {{ $users->appends(request()->query())->links() }}
 </div>
 @endif
-@endsection
-
-
-{{-- =========================================== --}}
-{{-- resources/views/admin/users/show.blade.php --}}
-@extends('layouts.admin')
-
-@section('title', 'Profil użytkownika')
-
-@push('styles')
-<style>
-    .profile-grid {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 1.5rem;
-    }
-
-    .profile-card {
-        background: white;
-        padding: 2rem;
-        border-radius: 16px;
-        border: 1px solid var(--border);
-        text-align: center;
-    }
-
-    .profile-avatar {
-        width: 120px;
-        height: 120px;
-        border-radius: 24px;
-        background: linear-gradient(135deg, var(--primary), var(--secondary));
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 3rem;
-        font-weight: 700;
-        margin: 0 auto 1.5rem;
-    }
-
-    .profile-name {
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-
-    .profile-email {
-        color: var(--gray);
-        margin-bottom: 1rem;
-    }
-
-    .profile-stats-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-        margin-top: 1.5rem;
-    }
-
-    .stat-box {
-        padding: 1rem;
-        background: var(--light-gray);
-        border-radius: 12px;
-        text-align: center;
-    }
-
-    .stat-box strong {
-        display: block;
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--primary);
-        margin-bottom: 0.25rem;
-    }
-
-    .stat-box span {
-        font-size: 0.875rem;
-        color: var(--gray);
-    }
-
-    .order-history-item {
-        padding: 1rem;
-        background: var(--light-gray);
-        border-radius: 10px;
-        margin-bottom: 0.75rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: all 0.2s;
-    }
-
-    .order-history-item:hover {
-        background: var(--border);
-    }
-
-    .address-card {
-        padding: 1.25rem;
-        background: var(--light-gray);
-        border-radius: 12px;
-        margin-bottom: 1rem;
-        position: relative;
-    }
-
-    .address-card.default::before {
-        content: 'Domyślny';
-        position: absolute;
-        top: 0.75rem;
-        right: 0.75rem;
-        font-size: 0.75rem;
-        font-weight: 600;
-        padding: 0.25rem 0.75rem;
-        background: var(--primary);
-        color: white;
-        border-radius: 6px;
-    }
-
-    @media (max-width: 1024px) {
-        .profile-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
-@endpush
-
-@section('content')
-<div class="page-header">
-    <div class="breadcrumb">
-        <a href="{{ route('admin.dashboard') }}">Admin</a>
-        <span>/</span>
-        <a href="{{ route('admin.users.index') }}">Użytkownicy</a>
-        <span>/</span>
-        <span>{{ $user->name }}</span>
-    </div>
-    <h1 class="page-title">Profil użytkownika</h1>
-    <p class="page-subtitle">Szczegóły konta i historia aktywności</p>
-</div>
-
-<div class="profile-grid">
-    <!-- Sidebar -->
-    <div>
-        <!-- Profile Card -->
-        <div class="profile-card">
-            <div class="profile-avatar">
-                {{ strtoupper(substr($user->name, 0, 1)) }}
-            </div>
-
-            <h2 class="profile-name">{{ $user->name }}</h2>
-            <p class="profile-email">{{ $user->email }}</p>
-
-            <div style="display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1rem;">
-                <span class="role-badge {{ $user->role }}">
-                    <i class="fas fa-{{ $user->role == 'admin' ? 'user-shield' : 'user' }}"></i>
-                    {{ $user->role == 'admin' ? 'Administrator' : 'Klient' }}
-                </span>
-
-                <span class="badge {{ $user->is_active ? 'badge-success' : 'badge-danger' }}">
-                    {{ $user->is_active ? 'Aktywny' : 'Nieaktywny' }}
-                </span>
-            </div>
-
-            <div class="profile-stats-grid">
-                <div class="stat-box">
-                    <strong>{{ $user->orders->count() }}</strong>
-                    <span>Zamówień</span>
-                </div>
-                <div class="stat-box">
-                    <strong>{{ number_format($user->orders->sum('total'), 0) }} zł</strong>
-                    <span>Wydane</span>
-                </div>
-                <div class="stat-box">
-                    <strong>{{ $user->reviews->count() }}</strong>
-                    <span>Opinii</span>
-                </div>
-                <div class="stat-box">
-                    <strong>{{ $user->wishlist->count() }}</strong>
-                    <span>Lista życzeń</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Edit User -->
-        <div class="order-section" style="margin-top: 1.5rem;">
-            <h3 class="section-title">Edycja użytkownika</h3>
-            
-            <form method="POST" action="{{ route('admin.users.update', $user) }}">
-                @csrf
-                @method('PATCH')
-                
-                <div class="form-group">
-                    <label class="form-label">Imię i nazwisko</label>
-                    <input type="text" name="name" class="form-input" value="{{ $user->name }}" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-input" value="{{ $user->email }}" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Telefon</label>
-                    <input type="text" name="phone" class="form-input" value="{{ $user->phone }}">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Rola</label>
-                    <select name="role" class="form-select">
-                        <option value="customer" {{ $user->role == 'customer' ? 'selected' : '' }}>Klient</option>
-                        <option value="admin" {{ $user->role == 'admin' ? 'selected' : '' }}>Administrator</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <div class="checkbox-group">
-                        <input type="checkbox" name="is_active" id="is_active" value="1" {{ $user->is_active ? 'checked' : '' }}>
-                        <label for="is_active">Konto aktywne</label>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-primary" style="width: 100%;">
-                    <i class="fas fa-save"></i> Zapisz zmiany
-                </button>
-            </form>
-        </div>
-
-        <!-- Info -->
-        <div class="order-section" style="margin-top: 1.5rem;">
-            <h3 class="section-title">Informacje</h3>
-            
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">Data rejestracji</div>
-                    <div class="info-value">{{ $user->created_at->format('d.m.Y H:i') }}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Ostatnia aktualizacja</div>
-                    <div class="info-value">{{ $user->updated_at->format('d.m.Y H:i') }}</div>
-                </div>
-                @if($user->email_verified_at)
-                <div class="info-item">
-                    <div class="info-label">Email zweryfikowany</div>
-                    <div class="info-value">
-                        <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                        {{ $user->email_verified_at->format('d.m.Y') }}
-                    </div>
-                </div>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div>
-        <!-- Order History -->
-        <div class="order-section">
-            <div class="section-header">
-                <h3 class="section-title">Historia zamówień ({{ $user->orders->count() }})</h3>
-                <a href="{{ route('admin.orders.index') }}?user_id={{ $user->id }}" class="card-action">
-                    Zobacz wszystkie <i class="fas fa-arrow-right"></i>
-                </a>
-            </div>
-
-            @forelse($user->orders->take(10) as $order)
-            <div class="order-history-item">
-                <div>
-                    <div style="font-weight: 600; margin-bottom: 0.25rem;">
-                        <a href="{{ route('admin.orders.show', $order) }}" style="color: var(--primary); text-decoration: none;">
-                            #{{ $order->order_number }}
-                        </a>
-                    </div>
-                    <div style="font-size: 0.875rem; color: var(--gray);">
-                        {{ $order->created_at->format('d.m.Y H:i') }} • {{ $order->items->count() }} produktów
-                    </div>
-                </div>
-                <div style="text-align: right;">
-                    <div style="font-weight: 700; font-size: 1.125rem; margin-bottom: 0.25rem;">
-                        {{ number_format($order->total, 2) }} zł
-                    </div>
-                    <span class="status-badge {{ $order->status }}">{{ $order->status }}</span>
-                </div>
-            </div>
-            @empty
-            <div style="text-align: center; padding: 3rem; color: var(--gray);">
-                <i class="fas fa-shopping-bag" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
-                <p>Brak zamówień</p>
-            </div>
-            @endforelse
-        </div>
-
-        <!-- Addresses -->
-        <div class="order-section" style="margin-top: 1.5rem;">
-            <h3 class="section-title">Adresy ({{ $user->addresses->count() }})</h3>
-
-            @forelse($user->addresses as $address)
-            <div class="address-card {{ $address->is_default ? 'default' : '' }}">
-                <h4 style="font-weight: 600; margin-bottom: 0.5rem;">
-                    {{ $address->first_name }} {{ $address->last_name }}
-                </h4>
-                <p style="color: var(--gray); font-size: 0.875rem; margin-bottom: 0.5rem;">
-                    {{ $address->street_address }}
-                    @if($address->apartment), {{ $address->apartment }}@endif
-                    <br>{{ $address->postal_code }} {{ $address->city }}
-                    <br>{{ $address->country }}
-                </p>
-                <p style="color: var(--gray); font-size: 0.875rem;">
-                    <i class="fas fa-phone"></i> {{ $address->phone }}
-                </p>
-            </div>
-            @empty
-            <div style="text-align: center; padding: 2rem; color: var(--gray); background: var(--light-gray); border-radius: 10px;">
-                <i class="fas fa-map-marker-alt" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3;"></i>
-                <p>Brak zapisanych adresów</p>
-            </div>
-            @endforelse
-        </div>
-
-        <!-- Reviews -->
-        @if($user->reviews->count() > 0)
-        <div class="order-section" style="margin-top: 1.5rem;">
-            <h3 class="section-title">Ostatnie opinie ({{ $user->reviews->count() }})</h3>
-
-            @foreach($user->reviews->take(5) as $review)
-            <div style="padding: 1rem; background: var(--light-gray); border-radius: 10px; margin-bottom: 0.75rem;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <div style="font-weight: 600;">{{ $review->product->name ?? 'Produkt usunięty' }}</div>
-                    <div>
-                        @for($i = 1; $i <= 5; $i++)
-                            <i class="fas fa-star" style="color: {{ $i <= $review->rating ? '#f59e0b' : '#e5e7eb' }};"></i>
-                        @endfor
-                    </div>
-                </div>
-                @if($review->title)
-                <div style="font-weight: 600; margin-bottom: 0.25rem;">{{ $review->title }}</div>
-                @endif
-                <p style="font-size: 0.875rem; color: var(--gray);">{{ $review->comment }}</p>
-                <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--gray);">
-                    {{ $review->created_at->format('d.m.Y') }}
-                    @if($review->is_approved)
-                        <span class="badge badge-success" style="margin-left: 0.5rem;">Zatwierdzona</span>
-                    @else
-                        <span class="badge badge-warning" style="margin-left: 0.5rem;">Oczekuje</span>
-                    @endif
-                </div>
-            </div>
-            @endforeach
-        </div>
-        @endif
-    </div>
-</div>
 @endsection

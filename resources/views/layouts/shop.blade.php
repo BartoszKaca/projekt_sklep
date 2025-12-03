@@ -108,11 +108,15 @@
     <div class="categories-nav">
         <div class="categories-content">
             @php
-            $navCategories = \App\Models\Category::orderBy('name')->take(12)->get();
+            $navCategories = \App\Models\Category::orderBy('name')->take(10)->get();
             @endphp
 
             <a href="{{ route('home') }}" class="cat-link {{ request()->routeIs('home') ? 'active' : '' }}">
-                <i class="fas fa-fire"></i> Nowości
+                <i class="fas fa-home"></i> Strona główna
+            </a>
+
+            <a href="{{ route('products.index') }}" class="cat-link {{ request()->routeIs('products.index') ? 'active' : '' }}">
+                <i class="fas fa-th-large"></i> Wszystkie produkty
             </a>
 
             @foreach($navCategories as $navCat)
