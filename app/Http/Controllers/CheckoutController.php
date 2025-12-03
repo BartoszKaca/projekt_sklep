@@ -60,6 +60,18 @@ class CheckoutController extends Controller
             $coupon = Coupon::where('code', $appliedCoupon)->first();
             if ($coupon && $coupon->isValid($cart['total'])) {
                 $discount = $coupon->calculateDiscount($cart['total']);
+                // Debug log
+                Log::info('Coupon applied in checkout', [
+                    'code' => $appliedCoupon,
+                    'cart_total' => $cart['total'],
+                    'discount' => $discount,
+                    'coupon_type' => $coupon->type,
+                    'coupon_value' => $coupon->value
+                ]);
+            } else {
+                // Kupon nieważny - usuń go z sesji
+                session()->forget('applied_coupon');
+                Log::warning('Invalid coupon removed from session', ['code' => $appliedCoupon]);
             }
         }
 
@@ -83,7 +95,14 @@ class CheckoutController extends Controller
         ]);
 
         $cart = session('cart', ['items' => [], 'total' => 0]);
-        $coupon = Coupon::where('code', $request->coupon_code)->first();
+        $code = strtoupper(trim($request->coupon_code));
+        $coupon = Coupon::where('code', $code)->first();
+
+        Log::info('Attempting to apply coupon', [
+            'code' => $code,
+            'cart_total' => $cart['total'],
+            'coupon_found' => $coupon ? 'yes' : 'no'
+        ]);
 
         if (!$coupon) {
             return redirect()->back()
@@ -91,11 +110,27 @@ class CheckoutController extends Controller
         }
 
         if (!$coupon->isValid($cart['total'])) {
+            Log::warning('Coupon invalid', [
+                'code' => $code,
+                'is_active' => $coupon->is_active,
+                'valid_from' => $coupon->valid_from,
+                'valid_until' => $coupon->valid_until,
+                'usage_count' => $coupon->usage_count,
+                'usage_limit' => $coupon->usage_limit,
+                'min_order_value' => $coupon->min_order_value,
+                'cart_total' => $cart['total']
+            ]);
             return redirect()->back()
                 ->with('error', 'Kupon jest nieważny lub nie spełniasz wymagań minimalnego zamówienia.');
         }
 
         session(['applied_coupon' => $coupon->code]);
+        
+        $discount = $coupon->calculateDiscount($cart['total']);
+        Log::info('Coupon applied successfully', [
+            'code' => $coupon->code,
+            'discount' => $discount
+        ]);
 
         return redirect()->back()
             ->with('success', 'Kupon został zastosowany.');

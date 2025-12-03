@@ -93,8 +93,17 @@ class PaymentController extends Controller
                 ];
             }
 
+            // Dodaj zniżkę z kuponu jako osobną pozycję
+            if ($order->discount > 0) {
+                $orderData['products'][] = [
+                    'name' => 'Rabat' . ($order->coupon_code ? ' (' . $order->coupon_code . ')' : ''),
+                    'unitPrice' => -(int)($order->discount * 100), // Ujemna wartość dla zniżki
+                    'quantity' => 1,
+                ];
+            }
+
             $response = \OpenPayU_Order::create($orderData);
-            $status = $response->getStatus();
+            $status = $response->getStatus(); 
 
             if ($status === 'SUCCESS') {
                 $redirectUri = $response->getResponse()->redirectUri;

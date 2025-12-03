@@ -573,6 +573,12 @@
                         <button type="submit" title="Usuń kupon"><i class="fas fa-times"></i></button>
                     </form>
                 </div>
+                {{-- Debug info --}}
+                @if(config('app.debug'))
+                <div style="background: #fef3c7; padding: 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-bottom: 0.5rem;">
+                    Debug: Coupon={{ $appliedCoupon }}, Discount={{ $discount }}, Cart={{ $cart['total'] }}
+                </div>
+                @endif
                 @else
                 <form action="{{ route('checkout.coupon') }}" method="POST" class="coupon-form">
                     @csrf
@@ -628,8 +634,13 @@
 @push('scripts')
 <script>
     const cartTotal = {{ $cart['total'] }};
-    const discount = {{ $discount }};
+    let discount = {{ $discount }};
     let currentShipping = {{ $shippingMethods['standard']['price'] }};
+    
+    // Debug: Log initial values
+    console.log('Cart Total:', cartTotal);
+    console.log('Initial Discount:', discount);
+    console.log('Applied Coupon:', '{{ $appliedCoupon ?? "none" }}');
     
     function updateShipping(price) {
         currentShipping = price;
@@ -663,6 +674,9 @@
         if (savedAddress && savedAddress.value) {
             fillAddress(savedAddress);
         }
+        
+        // Update total on load to ensure correct display
+        updateTotal();
     });
 </script>
 @endpush

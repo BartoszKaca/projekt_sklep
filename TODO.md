@@ -1,1 +1,0 @@
-! sporządź instrukcje deployowania tego na digitalocean z zewnętrzną domeną tak, aby był dostęp do phpmyadmin

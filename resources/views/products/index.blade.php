@@ -13,8 +13,7 @@
 
     /* Filters Sidebar */
     .filters-sidebar {
-        position: sticky;
-        top: 100px;
+        /* Removed sticky positioning to prevent overlay */
         height: fit-content;
     }
 

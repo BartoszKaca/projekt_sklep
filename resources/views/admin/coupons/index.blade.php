@@ -258,6 +258,23 @@
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label">Limit użyć</label>
+                    <input type="number" name="usage_limit" id="edit_usage_limit" class="form-input" min="1" placeholder="Bez limitu">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Ważny od</label>
+                        <input type="datetime-local" name="valid_from" id="edit_valid_from" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Ważny do</label>
+                        <input type="datetime-local" name="valid_until" id="edit_valid_until" class="form-input">
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <div class="checkbox-group">
                         <input type="checkbox" name="is_active" id="edit_coupon_is_active" value="1">
                         <label for="edit_coupon_is_active">Aktywny</label>
@@ -281,6 +298,23 @@
         document.getElementById('edit_type').value = coupon.type;
         document.getElementById('edit_value').value = coupon.value;
         document.getElementById('edit_min_order_value').value = coupon.min_order_value || '';
+        document.getElementById('edit_usage_limit').value = coupon.usage_limit || '';
+        
+        // Format dates for datetime-local input
+        if (coupon.valid_from) {
+            const validFrom = new Date(coupon.valid_from);
+            document.getElementById('edit_valid_from').value = validFrom.toISOString().slice(0, 16);
+        } else {
+            document.getElementById('edit_valid_from').value = '';
+        }
+        
+        if (coupon.valid_until) {
+            const validUntil = new Date(coupon.valid_until);
+            document.getElementById('edit_valid_until').value = validUntil.toISOString().slice(0, 16);
+        } else {
+            document.getElementById('edit_valid_until').value = '';
+        }
+        
         document.getElementById('edit_coupon_is_active').checked = coupon.is_active;
         document.getElementById('editCouponForm').action = `/admin/coupons/${id}`;
         document.getElementById('editCouponModal').classList.add('active');
