@@ -92,23 +92,6 @@
         border-color: var(--primary);
     }
 
-    .filter-btn {
-        width: 100%;
-        padding: 0.875rem;
-        border-radius: 8px;
-        border: none;
-        background: var(--primary);
-        color: white;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        margin-top: 1rem;
-    }
-
-    .filter-btn:hover {
-        background: var(--primary-dark);
-    }
-
     .clear-filters {
         width: 100%;
         padding: 0.875rem;
@@ -119,10 +102,13 @@
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
+        margin-top: 1rem;
     }
 
     .clear-filters:hover {
         background: var(--light);
+        border-color: var(--primary);
+        color: var(--primary);
     }
 
     /* Products Area */
@@ -335,6 +321,22 @@
     <div class="products-page">
         <!-- Filters Sidebar -->
         <aside class="filters-sidebar">
+            @php
+                $activeFiltersCount = 0;
+                if(request('categories')) $activeFiltersCount += count(request('categories'));
+                if(request('type')) $activeFiltersCount++;
+                if(request('formats')) $activeFiltersCount += count(request('formats'));
+                if(request('price_min') || request('price_max')) $activeFiltersCount++;
+                if(request('in_stock')) $activeFiltersCount++;
+                if(request('on_sale')) $activeFiltersCount++;
+            @endphp
+            
+            @if($activeFiltersCount > 0)
+            <div style="background: var(--primary); color: white; padding: 1rem; border-radius: 12px; margin-bottom: 1rem; text-align: center; font-weight: 600;">
+                <i class="fas fa-filter"></i> Aktywne filtry: {{ $activeFiltersCount }}
+            </div>
+            @endif
+            
             <form method="GET" id="filters-form">
                 <!-- Categories -->
                 <div class="filter-section">
@@ -448,11 +450,8 @@
                     </div>
                 </div>
 
-                <button type="submit" class="filter-btn">
-                    <i class="fas fa-filter"></i> Zastosuj filtry
-                </button>
-                <button type="button" onclick="clearFilters()" class="clear-filters" style="margin-top: 0.5rem;">
-                    <i class="fas fa-times"></i> Wyczyść
+                <button type="button" onclick="clearFilters()" class="clear-filters">
+                    <i class="fas fa-times"></i> Wyczyść filtry
                 </button>
             </form>
         </aside>
@@ -505,10 +504,24 @@
                 </span>
                 @endif
 
+                @foreach(request('formats', []) as $format)
+                <span class="filter-tag">
+                    Format: {{ $format }}
+                    <button type="button" onclick="removeFilter('formats[]', '{{ $format }}')">×</button>
+                </span>
+                @endforeach
+
                 @if(request('price_min') || request('price_max'))
                 <span class="filter-tag">
                     Cena: {{ request('price_min', 0) }} - {{ request('price_max', '∞') }} zł
-                    <button type="button" onclick="removeFilter('price_min'); removeFilter('price_max')">×</button>
+                    <button type="button" onclick="removePriceFilter()">×</button>
+                </span>
+                @endif
+
+                @if(request('in_stock'))
+                <span class="filter-tag">
+                    Dostępne w magazynie
+                    <button type="button" onclick="removeFilter('in_stock')">×</button>
                 </span>
                 @endif
 
@@ -621,20 +634,31 @@
     }
 
     function removeFilter(name, value) {
-        const form = document.getElementById('filters-form');
-        const inputs = form.querySelectorAll(`[name="${name}"]`);
+        const url = new URL(window.location);
         
-        inputs.forEach(input => {
-            if (value === undefined || input.value == value) {
-                if (input.type === 'checkbox' || input.type === 'radio') {
-                    input.checked = false;
-                } else {
-                    input.value = '';
+        if (value === undefined) {
+            // Usuń wszystkie parametry o tej nazwie
+            url.searchParams.delete(name);
+        } else {
+            // Usuń konkretną wartość z array
+            const values = url.searchParams.getAll(name);
+            url.searchParams.delete(name);
+            
+            values.forEach(v => {
+                if (v != value) {
+                    url.searchParams.append(name, v);
                 }
-            }
-        });
+            });
+        }
         
-        form.submit();
+        window.location = url;
+    }
+
+    function removePriceFilter() {
+        const url = new URL(window.location);
+        url.searchParams.delete('price_min');
+        url.searchParams.delete('price_max');
+        window.location = url;
     }
 
     function clearFilters() {
@@ -644,6 +668,51 @@
     function addToCart(productId) {
         // TODO: Implementacja koszyka
         alert('Produkt dodany do koszyka!');
+    }
+
+    // Automatyczne submittowanie formularza przy zmianie checkbox/radio
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('filters-form');
+        const checkboxes = form.querySelectorAll('input[type="checkbox"], input[type="radio"]');
+        
+        checkboxes.forEach(input => {
+            input.addEventListener('change', function() {
+                showLoadingIndicator();
+                form.submit();
+            });
+        });
+        
+        // Obsługa inputów cenowych
+        const priceInputs = form.querySelectorAll('.price-input');
+        priceInputs.forEach(input => {
+            // Submittuj na Enter
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    showLoadingIndicator();
+                    form.submit();
+                }
+            });
+            
+            // Submittuj po opuszczeniu pola (blur) jeśli wartość się zmieniła
+            let originalValue = input.value;
+            input.addEventListener('focus', function() {
+                originalValue = this.value;
+            });
+            input.addEventListener('blur', function() {
+                if (this.value !== originalValue) {
+                    showLoadingIndicator();
+                    form.submit();
+                }
+            });
+        });
+    });
+
+    // Wskaźnik ładowania
+    function showLoadingIndicator() {
+        const grid = document.getElementById('products-grid');
+        grid.style.opacity = '0.5';
+        grid.style.pointerEvents = 'none';
     }
 
     // toggleWishlist is defined globally in layout

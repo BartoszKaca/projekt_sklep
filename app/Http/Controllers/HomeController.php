@@ -50,56 +50,51 @@ class HomeController extends Controller
 
     public function products(Request $request): View
     {
-        
-
         $query = Product::where('is_active', 1)
             ->with(['primaryImage', 'category', 'reviews']);
 
-        
-
-        if ($request->filled('category')) {
-            $query->whereHas('category', function($q) use ($request) {
-                $q->where('slug', $request->category);
-            });
+        // Filtr po kategoriach (wielokrotny wybór)
+        if ($request->filled('categories')) {
+            $categoryIds = $request->input('categories', []);
+            if (is_array($categoryIds) && count($categoryIds) > 0) {
+                $query->whereIn('category_id', $categoryIds);
+            }
         }
 
-        
-
-        if ($request->filled('min_price')) {
-            $query->where(function($q) use ($request) {
-                $q->where('price', '>=', $request->min_price)
-                  ->orWhere('discount_price', '>=', $request->min_price);
-            });
-        }
-
-        
-
-        if ($request->filled('max_price')) {
-            $query->where(function($q) use ($request) {
-                $q->where(function($inner) use ($request) {
-                    $inner->whereNotNull('discount_price')
-                          ->where('discount_price', '<=', $request->max_price);
-                })->orWhere(function($inner) use ($request) {
-                    $inner->whereNull('discount_price')
-                          ->where('price', '<=', $request->max_price);
-                });
-            });
-        }
-
-        
-
+        // Filtr po typie produktu
         if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
 
-        
-
-        if ($request->filled('format')) {
-            $query->where('format', $request->format);
+        // Filtr po cenie minimalnej
+        if ($request->filled('price_min')) {
+            $query->whereRaw('COALESCE(discount_price, price) >= ?', [$request->price_min]);
         }
 
-        
+        // Filtr po cenie maksymalnej
+        if ($request->filled('price_max')) {
+            $query->whereRaw('COALESCE(discount_price, price) <= ?', [$request->price_max]);
+        }
 
+        // Filtr po formacie (wielokrotny wybór)
+        if ($request->filled('formats')) {
+            $formats = $request->input('formats', []);
+            if (is_array($formats) && count($formats) > 0) {
+                $query->whereIn('format', $formats);
+            }
+        }
+
+        // Filtr dostępności w magazynie
+        if ($request->filled('in_stock')) {
+            $query->where('stock', '>', 0);
+        }
+
+        // Filtr produktów w promocji
+        if ($request->filled('on_sale')) {
+            $query->whereNotNull('discount_price');
+        }
+
+        // Wyszukiwanie
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -109,9 +104,8 @@ class HomeController extends Controller
             });
         }
 
-        
-
-        switch ($request->get('sort', 'newest')) {
+        // Sortowanie
+        switch ($request->get('sort')) {
             case 'price_asc':
                 $query->orderByRaw('COALESCE(discount_price, price) ASC');
                 break;
@@ -121,28 +115,25 @@ class HomeController extends Controller
             case 'name_asc':
                 $query->orderBy('name', 'asc');
                 break;
-            case 'name_desc':
-                $query->orderBy('name', 'desc');
-                break;
-            case 'popular':
-                $query->orderBy('views_count', 'desc');
-                break;
             case 'newest':
+                $query->latest();
+                break;
             default:
                 $query->latest();
                 break;
         }
 
-        
-
+        // Paginacja z zachowaniem parametrów
         $products = $query->paginate(20)->withQueryString();
         
-        
+        // Pobierz kategorie z liczbą produktów
+        $categories = Category::active()
+            ->withCount(['products' => function($q) {
+                $q->where('is_active', 1);
+            }])
+            ->get();
 
-        $categories = Category::active()->get();
-
-        
-
+        // Zakres cen dla informacji
         $priceRange = Product::where('is_active', 1)->selectRaw('
             MIN(COALESCE(discount_price, price)) as min_price,
             MAX(COALESCE(discount_price, price)) as max_price
