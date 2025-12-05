@@ -239,9 +239,199 @@
     gap: 2rem;
 }
 
+/* ==============================================
+   WIDOK LISTY PRODUKTÓW
+   ============================================== */
+
+/* Domyślnie - ukryj akcje dla widoku listy, pokaż dla siatki */
+.product-actions.list-only {
+    display: none;
+}
+
+.product-actions.grid-only {
+    display: flex;
+}
+
+/* Kontener siatki w widoku listy */
+.products-grid.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Karta produktu w widoku listy */
+.product-card.list-view {
+    display: grid;
+    grid-template-columns: 180px 1fr auto;
+    gap: 1.5rem;
+    padding: 1.25rem;
+    align-items: center;
+    min-height: auto;
+}
+
+.product-card.list-view:hover {
+    transform: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* W widoku listy - ukryj akcje wewnątrz obrazka, pokaż zewnętrzne */
+.product-card.list-view .product-actions.grid-only {
+    display: none !important;
+}
+
+.product-card.list-view .product-actions.list-only {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 160px;
+    flex-shrink: 0;
+}
+
+/* Zdjęcie w widoku listy */
+.product-card.list-view .product-image {
+    aspect-ratio: 1;
+    width: 180px;
+    height: 180px;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.product-card.list-view .product-image-link {
+    width: 180px;
+    height: 180px;
+    flex-shrink: 0;
+}
+
+/* Badge w widoku listy */
+.product-card.list-view .product-badge {
+    top: 1.75rem;
+    left: 1.75rem;
+    right: auto;
+    font-size: 0.65rem;
+    padding: 0.35rem 0.75rem;
+}
+
+/* Informacje o produkcie w widoku listy */
+.product-card.list-view .product-info {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.product-card.list-view .product-name {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.product-card.list-view .product-artist {
+    margin-bottom: 0.5rem;
+}
+
+.product-card.list-view .product-category {
+    font-size: 0.7rem;
+}
+
+/* Przyciski akcji w widoku listy */
+.product-card.list-view .product-actions.list-only .product-action-btn {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark, #4f46e5));
+    color: white;
+    padding: 0.875rem 1.25rem;
+    font-size: 0.9rem;
+    border-radius: 10px;
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    transition: all 0.2s;
+}
+
+.product-card.list-view .product-actions.list-only .product-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+}
+
+.product-card.list-view .product-actions.list-only .product-action-btn.icon-only {
+    background: var(--light-gray, #f1f5f9);
+    color: var(--dark);
+    box-shadow: none;
+}
+
+.product-card.list-view .product-actions.list-only .product-action-btn.icon-only:hover {
+    background: var(--danger);
+    color: white;
+}
+
+/* Ceny w widoku listy */
+.product-card.list-view .product-price {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+
+.product-card.list-view .price-current {
+    font-size: 1.75rem;
+}
+
+/* ==============================================
+   RESPONSYWNOŚĆ
+   ============================================== */
+
+@media (max-width: 1024px) {
+    .product-card.list-view {
+        grid-template-columns: 140px 1fr;
+        gap: 1rem;
+    }
+    
+    .product-card.list-view .product-image,
+    .product-card.list-view .product-image-link {
+        width: 140px;
+        height: 140px;
+    }
+    
+    .product-card.list-view .product-actions.list-only {
+        flex-direction: row;
+        width: 100%;
+        grid-column: 1 / -1;
+        margin-top: 0.5rem;
+    }
+    
+    .product-card.list-view .product-actions.list-only .product-action-btn {
+        flex: 1;
+    }
+    
+    .product-card.list-view .product-actions.list-only .product-action-btn.icon-only {
+        flex: 0 0 auto;
+        width: 50px;
+    }
+}
+
 @media (max-width: 768px) {
     .products-grid {
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
         gap: 1rem;
+    }
+    
+    .product-card.list-view {
+        grid-template-columns: 100px 1fr;
+    }
+    
+    .product-card.list-view .product-image,
+    .product-card.list-view .product-image-link {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .product-card.list-view .product-name {
+        font-size: 1rem;
+    }
+    
+    .product-card.list-view .price-current {
+        font-size: 1.25rem;
+    }
+    
+    .product-card.list-view .product-actions.list-only .product-action-btn {
+        padding: 0.65rem 0.75rem;
+        font-size: 0.8rem;
     }
 }

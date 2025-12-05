@@ -155,27 +155,70 @@
     }
 
     .image-upload {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         border: 2px dashed var(--border);
-        border-radius: 12px;
-        padding: 2rem;
+        border-radius: 16px;
+        padding: 3rem 2rem;
         text-align: center;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.3s;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.02), rgba(236, 72, 153, 0.02));
+        min-height: 200px;
     }
 
     .image-upload:hover {
         border-color: var(--primary);
-        background: rgba(99, 102, 241, 0.05);
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(236, 72, 153, 0.05));
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);
     }
 
     .image-upload input[type="file"] {
-        display: none;
+        display: none !important;
+        visibility: hidden;
+        position: absolute;
+        width: 0;
+        height: 0;
     }
 
     .image-upload-icon {
-        font-size: 3rem;
+        font-size: 4rem;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 1.5rem;
+        opacity: 0.8;
+    }
+
+    .image-upload:hover .image-upload-icon {
+        opacity: 1;
+        transform: scale(1.1);
+        transition: all 0.3s;
+    }
+
+    .image-upload-text {
+        font-weight: 600;
+        font-size: 1rem;
+        color: var(--dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .image-upload-hint {
+        font-size: 0.875rem;
         color: var(--gray);
-        margin-bottom: 1rem;
+    }
+
+    .image-upload-formats {
+        margin-top: 1rem;
+        padding: 0.5rem 1rem;
+        background: var(--light-gray);
+        border-radius: 8px;
+        font-size: 0.75rem;
+        color: var(--gray);
     }
 
     .image-preview {
@@ -520,12 +563,35 @@
                         <div class="image-upload-icon">
                             <i class="fas fa-cloud-upload-alt"></i>
                         </div>
-                        <div style="font-weight: 600; margin-bottom: 0.5rem;">Kliknij aby dodać zdjęcia</div>
-                        <div style="font-size: 0.875rem; color: var(--gray);">lub przeciągnij i upuść pliki tutaj</div>
+                        <div class="image-upload-text">Kliknij aby dodać zdjęcia</div>
+                        <div class="image-upload-hint">lub przeciągnij i upuść pliki tutaj</div>
+                        <div class="image-upload-formats">
+                            <i class="fas fa-image"></i> JPG, PNG, GIF, WebP • max 5MB
+                        </div>
                         <input type="file" id="images" name="images[]" multiple accept="image/*">
                     </label>
 
                     <div id="imagePreview" class="image-preview"></div>
+                    
+                    @if(isset($product) && $product->images->count() > 0)
+                    <div class="existing-images" style="margin-top: 1.5rem;">
+                        <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray);">
+                            <i class="fas fa-images"></i> Aktualne zdjęcia ({{ $product->images->count() }})
+                        </h4>
+                        <div class="image-preview">
+                            @foreach($product->images as $image)
+                            <div class="image-preview-item">
+                                <img src="{{ asset('storage/' . $image->path) }}" alt="Product image">
+                                @if($image->is_primary)
+                                <span style="position: absolute; top: 0.5rem; left: 0.5rem; background: var(--success); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600;">
+                                    <i class="fas fa-star"></i> Główne
+                                </span>
+                                @endif
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>

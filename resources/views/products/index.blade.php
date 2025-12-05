@@ -542,24 +542,26 @@
                     @elseif($product->created_at->gt(now()->subDays(7)))
                     <span class="product-badge new">Nowość</span>
                     @endif
-                      <a href="{{ route('products.show', $product->slug) }}" class="product-image-link">
-                    <div class="product-image">
-                        @if($product->primaryImage)
-                        <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
-                        @else
-                        <i class="fas fa-compact-disc"></i>
-                        @endif
+                    
+                    <a href="{{ route('products.show', $product->slug) }}" class="product-image-link">
+                        <div class="product-image">
+                            @if($product->primaryImage)
+                            <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
+                            @else
+                            <i class="fas fa-compact-disc"></i>
+                            @endif
 
-                        <div class="product-actions">
-                            <button class="product-action-btn" onclick="addToCart('{{ $product->id }}')">
-                                <i class="fas fa-shopping-bag"></i> Dodaj
-                            </button>
-                            <button class="product-action-btn icon-only" onclick="toggleWishlist('{{ $product->id }}')">
-                                <i class="far fa-heart"></i>
-                            </button>
+                            {{-- Akcje widoczne tylko w widoku siatki (grid) --}}
+                            <div class="product-actions grid-only">
+                                <button class="product-action-btn" onclick="event.preventDefault(); addToCart('{{ $product->id }}')">
+                                    <i class="fas fa-shopping-bag"></i> Dodaj
+                                </button>
+                                <button class="product-action-btn icon-only" onclick="event.preventDefault(); toggleWishlist('{{ $product->id }}')">
+                                    <i class="far fa-heart"></i>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                        </a>
+                    </a>
 
                     <div class="product-info">
                         <div class="product-category">{{ $product->category->name }}</div>
@@ -580,6 +582,16 @@
                             <i class="fas fa-times-circle"></i> Brak w magazynie
                         </div>
                         @endif
+                    </div>
+                    
+                    {{-- Akcje widoczne tylko w widoku listy --}}
+                    <div class="product-actions list-only">
+                        <button class="product-action-btn" onclick="addToCart('{{ $product->id }}')">
+                            <i class="fas fa-shopping-bag"></i> Do koszyka
+                        </button>
+                        <button class="product-action-btn icon-only" onclick="toggleWishlist('{{ $product->id }}')">
+                            <i class="far fa-heart"></i>
+                        </button>
                     </div>
                 </div>
                 @empty

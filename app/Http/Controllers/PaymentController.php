@@ -131,16 +131,61 @@ class PaymentController extends Controller
 
     public function return(Order $order): RedirectResponse
     {
-
         $order->refresh();
         
+        // Jeśli już opłacone - sukces
         if ($order->payment_status === 'paid') {
             return redirect()->route('checkout.success', ['order' => $order->id])
                 ->with('success', 'Płatność została zrealizowana pomyślnie!');
         }
         
+        // Sprawdź aktywnie status płatności w PayU
+        if ($order->payu_order_id) {
+            try {
+                $this->configurePayU();
+                
+                $response = \OpenPayU_Order::retrieve($order->payu_order_id);
+                
+                if ($response->getStatus() === 'SUCCESS') {
+                    $orders = $response->getResponse()->orders ?? [];
+                    
+                    if (!empty($orders)) {
+                        $payuStatus = $orders[0]->status ?? null;
+                        
+                        Log::info("PayU return check for order {$order->order_number}: status = {$payuStatus}");
+                        
+                        if ($payuStatus === 'COMPLETED') {
+                            // Płatność zakończona - oznacz jako opłacone
+                            if ($order->payment_status !== 'paid') {
+                                $order->markAsPaid();
+                                
+                                if ($order->status === 'pending') {
+                                    $order->update(['status' => 'confirmed']);
+                                }
+                                
+                                Log::info("Order {$order->order_number} marked as paid on return");
+                            }
+                            
+                            return redirect()->route('checkout.success', ['order' => $order->id])
+                                ->with('success', 'Płatność została zrealizowana pomyślnie!');
+                        } elseif ($payuStatus === 'CANCELED' || $payuStatus === 'REJECTED') {
+                            $order->update(['payment_status' => 'failed']);
+                            
+                            return redirect()->route('checkout.success', ['order' => $order->id])
+                                ->with('error', 'Płatność została anulowana lub odrzucona. Możesz spróbować ponownie.');
+                        } elseif ($payuStatus === 'PENDING' || $payuStatus === 'WAITING_FOR_CONFIRMATION') {
+                            return redirect()->route('checkout.success', ['order' => $order->id])
+                                ->with('info', 'Płatność jest w trakcie przetwarzania. Status zostanie zaktualizowany automatycznie.');
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('PayU status check on return failed: ' . $e->getMessage());
+            }
+        }
+        
         return redirect()->route('checkout.success', ['order' => $order->id])
-            ->with('info', 'Dziękujemy za płatność. Status zostanie zaktualizowany po weryfikacji.');
+            ->with('info', 'Dziękujemy za złożenie zamówienia. Status płatności zostanie zaktualizowany po weryfikacji.');
     }
 
 
@@ -236,32 +281,66 @@ class PaymentController extends Controller
 
     public function checkStatus(Order $order): \Illuminate\Http\JsonResponse
     {
-
+        // Sprawdź uprawnienia - ale pozwól na dostęp do własnych zamówień lub zamówień gości
         if (auth()->check() && $order->user_id && $order->user_id !== auth()->id()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        try {
-            $this->configurePayU();
-
-            $response = \OpenPayU_Order::retrieve($order->order_number);
-
-            if ($response->getStatus() === 'SUCCESS') {
-                $payuStatus = $response->getResponse()->orders[0]->status ?? 'unknown';
-
-                return response()->json([
-                    'order_number' => $order->order_number,
-                    'payment_status' => $order->payment_status,
-                    'order_status' => $order->status,
-                    'payu_status' => $payuStatus,
-                ]);
-            }
-
-            return response()->json(['error' => 'Could not retrieve payment status'], 500);
-
-        } catch (\Exception $e) {
-            Log::error('PayU status check error: ' . $e->getMessage());
-            return response()->json(['error' => 'Error checking payment status'], 500);
+        // Jeśli już opłacone, zwróć status od razu
+        if ($order->payment_status === 'paid') {
+            return response()->json([
+                'order_number' => $order->order_number,
+                'payment_status' => $order->payment_status,
+                'order_status' => $order->status,
+            ]);
         }
+
+        // Sprawdź status w PayU jeśli mamy payu_order_id
+        if ($order->payu_order_id) {
+            try {
+                $this->configurePayU();
+
+                $response = \OpenPayU_Order::retrieve($order->payu_order_id);
+
+                if ($response->getStatus() === 'SUCCESS') {
+                    $orders = $response->getResponse()->orders ?? [];
+                    
+                    if (!empty($orders)) {
+                        $payuStatus = $orders[0]->status ?? 'unknown';
+                        
+                        // Jeśli płatność zakończona - zaktualizuj status
+                        if ($payuStatus === 'COMPLETED' && $order->payment_status !== 'paid') {
+                            $order->markAsPaid();
+                            
+                            if ($order->status === 'pending') {
+                                $order->update(['status' => 'confirmed']);
+                            }
+                            
+                            $order->refresh();
+                            Log::info("Order {$order->order_number} marked as paid via status check");
+                        } elseif (($payuStatus === 'CANCELED' || $payuStatus === 'REJECTED') && $order->payment_status !== 'failed') {
+                            $order->update(['payment_status' => 'failed']);
+                            $order->refresh();
+                        }
+
+                        return response()->json([
+                            'order_number' => $order->order_number,
+                            'payment_status' => $order->payment_status,
+                            'order_status' => $order->status,
+                            'payu_status' => $payuStatus,
+                        ]);
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('PayU status check error: ' . $e->getMessage());
+            }
+        }
+
+        // Zwróć aktualny status z bazy
+        return response()->json([
+            'order_number' => $order->order_number,
+            'payment_status' => $order->payment_status,
+            'order_status' => $order->status,
+        ]);
     }
 }

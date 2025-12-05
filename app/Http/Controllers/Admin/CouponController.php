@@ -28,6 +28,10 @@ class CouponController extends Controller
         ]);
 
         $validated['code'] = strtoupper($validated['code']);
+        
+        // Obsługa pola boolean - gdy checkbox nie jest zaznaczony, nie jest wysyłany
+        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
+        
         Coupon::create($validated);
 
         return back()->with('success', 'Kupon został utworzony!');
@@ -42,8 +46,10 @@ class CouponController extends Controller
             'usage_limit' => 'nullable|integer|min:1',
             'valid_from' => 'nullable|date',
             'valid_until' => 'nullable|date|after:valid_from',
-            'is_active' => 'boolean',
         ]);
+        
+        // Obsługa pola boolean - gdy checkbox nie jest zaznaczony, nie jest wysyłany
+        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
 
         $coupon->update($validated);
 

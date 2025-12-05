@@ -84,10 +84,13 @@ class OrderController extends Controller
             'payment_status' => 'required|in:pending,paid,failed,refunded',
         ]);
 
-        $order->update($validated);
-
+        // Jeśli status = paid, użyj markAsPaid() który ustawia też paid_at i wysyła email
         if ($validated['payment_status'] === 'paid') {
             $order->markAsPaid();
+        } else {
+            // Dla innych statusów - zwykły update
+            $order->payment_status = $validated['payment_status'];
+            $order->save();
         }
 
         return back()->with('success', 'Status płatności został zaktualizowany!');

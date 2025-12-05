@@ -86,7 +86,7 @@ class HomeController extends Controller
 
         // Filtr dostępności w magazynie
         if ($request->filled('in_stock')) {
-            $query->where('stock', '>', 0);
+            $query->where('stock_quantity', '>', 0);
         }
 
         // Filtr produktów w promocji

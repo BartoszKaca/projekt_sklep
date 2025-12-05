@@ -391,4 +391,54 @@
         </div>
     </div>
 </div>
+
+@if($order->payment_method === 'payu' && $order->payment_status === 'pending')
+@push('scripts')
+<script>
+    // Automatyczne sprawdzanie statusu płatności dla zamówień PayU
+    let checkCount = 0;
+    const maxChecks = 12; // Sprawdzaj przez 2 minuty (co 10 sekund)
+    
+    function checkPaymentStatus() {
+        checkCount++;
+        
+        if (checkCount > maxChecks) {
+            console.log('Zakończono sprawdzanie statusu płatności');
+            return;
+        }
+        
+        fetch('/payment/{{ $order->id }}/status', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Payment status:', data);
+            
+            if (data.payment_status === 'paid') {
+                // Płatność potwierdzona - odśwież stronę
+                location.reload();
+            } else if (data.payment_status === 'failed') {
+                // Płatność nieudana - odśwież stronę
+                location.reload();
+            } else {
+                // Nadal oczekuje - sprawdź ponownie za 10 sekund
+                setTimeout(checkPaymentStatus, 10000);
+            }
+        })
+        .catch(error => {
+            console.error('Błąd sprawdzania statusu:', error);
+            // W przypadku błędu, spróbuj ponownie za 15 sekund
+            setTimeout(checkPaymentStatus, 15000);
+        });
+    }
+    
+    // Rozpocznij sprawdzanie po 3 sekundach
+    setTimeout(checkPaymentStatus, 3000);
+</script>
+@endpush
+@endif
 @endsection

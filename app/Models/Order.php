@@ -78,10 +78,10 @@ class Order extends Model
 
     public function markAsPaid()
     {
-        $this->update([
-            'payment_status' => 'paid',
-            'paid_at' => now(),
-        ]);
+        // Ustawiamy atrybuty na modelu, co pozwala observerowi wykryć zmiany przez isDirty()
+        $this->payment_status = 'paid';
+        $this->paid_at = now();
+        $this->save();
     }
 
 

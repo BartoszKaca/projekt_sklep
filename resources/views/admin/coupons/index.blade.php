@@ -5,66 +5,167 @@
 
 @push('styles')
 <style>
+    .coupons-grid {
+        display: grid;
+        gap: 1rem;
+    }
+
     .coupon-card {
         background: white;
         border: 1px solid var(--border);
-        border-radius: 12px;
+        border-radius: 16px;
         padding: 1.5rem;
-        margin-bottom: 1rem;
         display: grid;
         grid-template-columns: auto 1fr auto auto;
         gap: 1.5rem;
         align-items: center;
-        transition: all 0.2s;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .coupon-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(180deg, var(--primary), var(--secondary));
     }
 
     .coupon-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .coupon-card.inactive {
+        opacity: 0.6;
+    }
+
+    .coupon-card.inactive::before {
+        background: var(--gray);
+    }
+
+    .coupon-code-wrapper {
+        position: relative;
     }
 
     .coupon-code {
-        font-family: 'Courier New', monospace;
-        font-size: 1.5rem;
+        font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+        font-size: 1.25rem;
         font-weight: 700;
-        background: linear-gradient(135deg, var(--primary), var(--secondary));
-        background-clip: text;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        padding: 0.5rem 1rem;
-        background-color: var(--light-gray);
-        border-radius: 8px;
-        border: 2px dashed var(--border);
+        color: var(--primary);
+        padding: 0.75rem 1.25rem;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1));
+        border-radius: 10px;
+        border: 2px dashed var(--primary);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    .coupon-type-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: var(--primary);
+        color: white;
+        font-size: 0.65rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-weight: 600;
     }
 
     .coupon-details h4 {
-        font-weight: 600;
+        font-weight: 700;
+        font-size: 1.125rem;
         margin-bottom: 0.5rem;
+        color: var(--dark);
+    }
+
+    .coupon-value {
+        display: inline-block;
+        background: linear-gradient(135deg, var(--success), #059669);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 1rem;
+        margin-right: 0.5rem;
+    }
+
+    .coupon-min-order {
+        color: var(--gray);
+        font-size: 0.875rem;
     }
 
     .coupon-meta {
         display: flex;
+        flex-wrap: wrap;
         gap: 1rem;
-        font-size: 0.875rem;
+        font-size: 0.8rem;
         color: var(--gray);
+        margin-top: 0.75rem;
+    }
+
+    .coupon-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .coupon-meta-item i {
+        color: var(--primary);
     }
 
     .coupon-stats {
         text-align: center;
-        padding: 0.75rem 1.25rem;
-        background: var(--light-gray);
-        border-radius: 10px;
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, var(--light-gray), rgba(99, 102, 241, 0.05));
+        border-radius: 12px;
+        min-width: 100px;
     }
 
     .coupon-stats strong {
         display: block;
-        font-size: 1.25rem;
-        font-weight: 700;
+        font-size: 1.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         margin-bottom: 0.25rem;
     }
 
     .coupon-stats span {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: var(--gray);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .coupon-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-end;
+    }
+
+    @media (max-width: 1024px) {
+        .coupon-card {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .coupon-code-wrapper {
+            justify-self: start;
+        }
+
+        .coupon-actions {
+            flex-direction: row;
+            justify-content: space-between;
+            width: 100%;
+        }
     }
 </style>
 @endpush
@@ -165,59 +266,94 @@
 </div>
 
 <!-- Coupons List -->
+<div class="coupons-grid">
 @forelse($coupons ?? [] as $coupon)
-<div class="coupon-card">
-    <div class="coupon-code">{{ $coupon->code }}</div>
+<div class="coupon-card {{ !$coupon->is_active ? 'inactive' : '' }}">
+    <div class="coupon-code-wrapper">
+        <div class="coupon-code">{{ $coupon->code }}</div>
+        <span class="coupon-type-badge">
+            {{ $coupon->type == 'percentage' ? '%' : 'PLN' }}
+        </span>
+    </div>
 
     <div class="coupon-details">
         <h4>
-            {{ $coupon->type == 'percentage' ? $coupon->value . '%' : $coupon->value . ' zł' }} rabatu
+            <span class="coupon-value">
+                @if($coupon->type == 'percentage')
+                    -{{ number_format($coupon->value, 0) }}%
+                @else
+                    -{{ number_format($coupon->value, 2) }} zł
+                @endif
+            </span>
             @if($coupon->min_order_value)
-                • Min. {{ $coupon->min_order_value }} zł
+                <span class="coupon-min-order">
+                    min. zamówienie {{ number_format($coupon->min_order_value, 2) }} zł
+                </span>
             @endif
         </h4>
         <div class="coupon-meta">
             @if($coupon->valid_from)
-                <span><i class="fas fa-calendar-alt"></i> Od: {{ $coupon->valid_from->format('d.m.Y') }}</span>
+                <span class="coupon-meta-item">
+                    <i class="fas fa-play-circle"></i> 
+                    Od: {{ $coupon->valid_from->format('d.m.Y H:i') }}
+                </span>
             @endif
             @if($coupon->valid_until)
-                <span><i class="fas fa-calendar-times"></i> Do: {{ $coupon->valid_until->format('d.m.Y') }}</span>
+                <span class="coupon-meta-item">
+                    <i class="fas fa-stop-circle"></i> 
+                    Do: {{ $coupon->valid_until->format('d.m.Y H:i') }}
+                </span>
+            @else
+                <span class="coupon-meta-item">
+                    <i class="fas fa-infinity"></i> 
+                    Bez limitu czasowego
+                </span>
+            @endif
+            @if($coupon->usage_limit)
+                <span class="coupon-meta-item">
+                    <i class="fas fa-users"></i> 
+                    Limit: {{ $coupon->usage_limit }} użyć
+                </span>
             @endif
         </div>
     </div>
 
     <div class="coupon-stats">
-        <strong>{{ $coupon->usage_count }}/{{ $coupon->usage_limit ?? '∞' }}</strong>
-        <span>użyć</span>
+        <strong>{{ $coupon->usage_count ?? 0 }}/{{ $coupon->usage_limit ?? '∞' }}</strong>
+        <span>wykorzystań</span>
     </div>
 
-    <div class="action-btns">
-        <button onclick="editCoupon({{ $coupon->id }}, {{ json_encode($coupon) }})"  
-                class="action-btn edit" title="Edytuj">
-            <i class="fas fa-edit"></i>
-        </button>
-        
-        <form method="POST" action="{{ route('admin.coupons.destroy', $coupon) }}" style="margin: 0;"  
-              onsubmit="return confirm('Czy na pewno chcesz usunąć ten kupon?')">
-            @csrf
-            @method('DELETE')
-            <button type="submit" class="action-btn delete" title="Usuń">
-                <i class="fas fa-trash"></i>
-            </button>
-        </form>
-
+    <div class="coupon-actions">
         <span class="badge {{ $coupon->is_active ? 'badge-success' : 'badge-danger' }}">
+            <i class="fas fa-{{ $coupon->is_active ? 'check' : 'times' }}"></i>
             {{ $coupon->is_active ? 'Aktywny' : 'Nieaktywny' }}
         </span>
+        
+        <div class="action-btns">
+            <button onclick="editCoupon({{ $coupon->id }}, {{ json_encode($coupon) }})"  
+                    class="action-btn edit" title="Edytuj">
+                <i class="fas fa-edit"></i>
+            </button>
+            
+            <form method="POST" action="{{ route('admin.coupons.destroy', $coupon) }}" style="margin: 0;"  
+                  onsubmit="return confirm('Czy na pewno chcesz usunąć kupon {{ $coupon->code }}?')">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="action-btn delete" title="Usuń">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 @empty
-<div class="empty-state" style="background: white; padding: 3rem; border-radius: 16px;">
-    <i class="fas fa-ticket-alt"></i>
-    <h3>Brak kuponów</h3>
-    <p>Utwórz pierwszy kupon rabatowy używając formularza powyżej</p>
+<div class="empty-state" style="background: white; padding: 4rem 2rem; border-radius: 16px; text-align: center;">
+    <i class="fas fa-ticket-alt" style="font-size: 5rem; opacity: 0.2; color: var(--primary);"></i>
+    <h3 style="margin-top: 1.5rem; color: var(--dark);">Brak kuponów rabatowych</h3>
+    <p style="color: var(--gray); margin-top: 0.5rem;">Utwórz pierwszy kupon rabatowy używając formularza powyżej, aby zachęcić klientów do zakupów!</p>
 </div>
 @endforelse
+</div>
 
 <!-- Edit Coupon Modal -->
 <div id="editCouponModal" class="modal">

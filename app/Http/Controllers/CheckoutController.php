@@ -171,8 +171,8 @@ class CheckoutController extends Controller
                     if (!$variant) {
                         throw new \Exception("Wariant produktu {$item['name']} nie jest już dostępny.");
                     }
-                    if ($variant->stock !== null && $variant->stock < $item['quantity']) {
-                        throw new \Exception("Produkt {$item['name']} ma tylko {$variant->stock} sztuk w magazynie.");
+                    if ($variant->stock_quantity !== null && $variant->stock_quantity < $item['quantity']) {
+                        throw new \Exception("Produkt {$item['name']} ma tylko {$variant->stock_quantity} sztuk w magazynie.");
                     }
                 } else {
                     if ($product->stock_quantity !== null && $product->stock_quantity < $item['quantity']) {
@@ -262,8 +262,8 @@ class CheckoutController extends Controller
                 
 
                 if ($variant) {
-                    if ($variant->stock !== null) {
-                        $variant->decrement('stock', $item['quantity']);
+                    if ($variant->stock_quantity !== null) {
+                        $variant->decrement('stock_quantity', $item['quantity']);
                     }
                 } else {
                     $product->decreaseStock($item['quantity']);

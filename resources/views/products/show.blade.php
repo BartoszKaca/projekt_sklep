@@ -78,7 +78,7 @@
                     <select id="variant" style="display:block; margin-top:0.5rem; padding:0.75rem; border-radius:8px; width:100%;">
                         <option value="">-- wybierz --</option>
                         @foreach($product->variants as $variant)
-                            <option value="{{ $variant->id }}" data-price="{{ $variant->price ?? $product->getFinalPrice() }}">{{ $variant->name ?? ($variant->sku ?? 'Wariant') }} @if($variant->price) - {{ number_format($variant->price,2) }} zł @endif (stan: {{ $variant->stock }})</option>
+                            <option value="{{ $variant->id }}" data-price="{{ $variant->price ?? $product->getFinalPrice() }}">{{ $variant->name ?? ($variant->sku ?? 'Wariant') }} @if($variant->price) - {{ number_format($variant->price,2) }} zł @endif (stan: {{ $variant->stock_quantity }})</option>
                         @endforeach
                     </select>
                 @endif

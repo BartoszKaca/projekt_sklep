@@ -92,6 +92,7 @@ Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])-
 
 Route::get('/payment/{order}', [PaymentController::class, 'process'])->name('payment.process');
 Route::get('/payment/{order}/return', [PaymentController::class, 'return'])->name('payment.return');
+Route::get('/payment/{order}/status', [PaymentController::class, 'checkStatus'])->name('payment.status');
 Route::post('/payment/notify', [PaymentController::class, 'notify'])->name('payment.notify');
 
 // === PANEL ADMINA ===

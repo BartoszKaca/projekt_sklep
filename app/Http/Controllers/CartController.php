@@ -56,18 +56,18 @@ class CartController extends Controller
                 return response()->json(['success' => false, 'message' => 'Wariant nie znaleziony.'], 404);
             }
             $price = $variant->price ?? $product->getFinalPrice() ?? $product->price;
-            $stock = $variant->stock ?? null;
+            $stock = $variant->stock_quantity ?? null;
             $itemKey = 'v'.$variant->id;
         } else {
 
             $variant = $product->variants()->first();
             if ($variant) {
                 $price = $variant->price ?? $product->getFinalPrice() ?? $product->price;
-                $stock = $variant->stock ?? null;
+                $stock = $variant->stock_quantity ?? null;
                 $itemKey = 'v'.$variant->id;
             } else {
                 $price = $product->getFinalPrice() ?? $product->price;
-                $stock = $product->stock ?? null; 
+                $stock = $product->stock_quantity ?? null; 
 
                 $itemKey = 'p'.$product->id;
             }

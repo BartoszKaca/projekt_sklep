@@ -73,6 +73,11 @@ class ProductController extends Controller
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
+        
+        // Obsługa pól boolean - gdy checkbox nie jest zaznaczony, nie jest wysyłany
+        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
+        $validated['is_featured'] = $request->has('is_featured') ? 1 : 0;
+        
         $product = Product::create($validated);
 
         if ($request->hasFile('images')) {
@@ -121,6 +126,11 @@ class ProductController extends Controller
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
+        
+        // Obsługa pól boolean - gdy checkbox nie jest zaznaczony, nie jest wysyłany
+        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
+        $validated['is_featured'] = $request->has('is_featured') ? 1 : 0;
+        
         $product->update($validated);
 
         return redirect()->route('admin.products.index')
