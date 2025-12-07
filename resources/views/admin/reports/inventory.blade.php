@@ -136,15 +136,15 @@
 		<div class="summary-box-icon" style="background: #dbeafe; color: #1e40af;">
 			<i class="fas fa-boxes"></i>
 		</div>
-		<h3>{{ \App\Models\Product::count() }}</h3>
-		<p>Produktów w systemie</p>
+		<h3>{{ \App\Models\Product::count() + \App\Models\ProductVariant::count() }}</h3>
+		<p>Produktów/Wariantów</p>
 	</div>
 
 	<div class="summary-box">
 		<div class="summary-box-icon" style="background: #d1fae5; color: #065f46;">
 			<i class="fas fa-warehouse"></i>
 		</div>
-		<h3>{{ \App\Models\Product::sum('stock_quantity') }}</h3>
+		<h3>{{ $totalUnits ?? \App\Models\Product::sum('stock_quantity') }}</h3>
 		<p>Jednostek na stanie</p>
 	</div>
 
@@ -152,7 +152,7 @@
 		<div class="summary-box-icon" style="background: #fef3c7; color: #92400e;">
 			<i class="fas fa-exclamation-triangle"></i>
 		</div>
-		<h3>{{ $lowStockProducts->count() }}</h3>
+		<h3>{{ ($lowStockProducts->count() ?? 0) + ($lowStockVariants->count() ?? 0) }}</h3>
 		<p>Niski stan</p>
 	</div>
 
@@ -160,7 +160,7 @@
 		<div class="summary-box-icon" style="background: #fee2e2; color: #991b1b;">
 			<i class="fas fa-times-circle"></i>
 		</div>
-		<h3>{{ $outOfStock->count() }}</h3>
+		<h3>{{ ($outOfStock->count() ?? 0) + ($outOfStockVariants->count() ?? 0) }}</h3>
 		<p>Brak w magazynie</p>
 	</div>
 
@@ -299,4 +299,102 @@
 	</div>
 	@endforeach
 </div>
+
+<!-- Low Stock Variants -->
+@if(isset($lowStockVariants) && $lowStockVariants->count() > 0)
+<div class="chart-card" style="margin-top: 1.5rem;">
+	<h3 class="section-title" style="margin-bottom: 1.5rem;">
+		<i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> 
+		Warianty z niskim stanem ({{ $lowStockVariants->count() }})
+	</h3>
+
+	<div class="inventory-table">
+		<div class="table-header-row">
+			<div>Produkt / Wariant</div>
+			<div>Rozmiar</div>
+			<div>Stan obecny</div>
+			<div>Próg</div>
+			<div>Akcje</div>
+		</div>
+
+		@foreach($lowStockVariants as $variant)
+		<div class="table-row">
+			<div>
+				<div style="font-weight: 600;">{{ $variant->product->name }}</div>
+				<div style="font-size: 0.875rem; color: var(--gray);">SKU: {{ $variant->sku }}</div>
+			</div>
+			<div>
+				<span class="badge badge-info">{{ $variant->size ?? 'N/A' }}</span>
+				@if($variant->color)
+				<span class="badge badge-secondary" style="margin-left: 0.25rem;">{{ $variant->color }}</span>
+				@endif
+			</div>
+			<div>
+				<span class="value-badge {{ $variant->stock_quantity == 0 ? 'low' : 'medium' }}">
+					{{ $variant->stock_quantity }}
+				</span>
+			</div>
+			<div>
+				<span style="color: var(--gray);">{{ $variant->product->low_stock_threshold }}</span>
+			</div>
+			<div>
+				<a href="{{ route('admin.products.stock', $variant->product) }}" class="btn btn-primary" style="padding: 0.5rem 1rem;">
+					<i class="fas fa-edit"></i> Zarządzaj
+				</a>
+			</div>
+		</div>
+		@endforeach
+	</div>
+</div>
+@endif
+
+<!-- Out of Stock Variants -->
+@if(isset($outOfStockVariants) && $outOfStockVariants->count() > 0)
+<div class="chart-card" style="margin-top: 1.5rem;">
+	<h3 class="section-title" style="margin-bottom: 1.5rem;">
+		<i class="fas fa-times-circle" style="color: var(--danger);"></i> 
+		Warianty wyczerpane ({{ $outOfStockVariants->count() }})
+	</h3>
+
+	<div class="inventory-table">
+		<div class="table-header-row">
+			<div>Produkt / Wariant</div>
+			<div>Rozmiar</div>
+			<div>Ostatnia sprzedaż</div>
+			<div>Cena</div>
+			<div>Akcje</div>
+		</div>
+
+		@foreach($outOfStockVariants as $variant)
+		<div class="table-row">
+			<div>
+				<div style="font-weight: 600;">{{ $variant->product->name }}</div>
+				<div style="font-size: 0.875rem; color: var(--gray);">SKU: {{ $variant->sku }}</div>
+			</div>
+			<div>
+				<span class="badge badge-info">{{ $variant->size ?? 'N/A' }}</span>
+				@if($variant->color)
+				<span class="badge badge-secondary" style="margin-left: 0.25rem;">{{ $variant->color }}</span>
+				@endif
+			</div>
+			<div style="color: var(--gray); font-size: 0.875rem;">
+				@if($variant->stockMovements->where('type', 'out')->first())
+					{{ $variant->stockMovements->where('type', 'out')->first()->created_at->format('d.m.Y') }}
+				@else
+					-
+				@endif
+			</div>
+			<div style="font-weight: 700;">
+				{{ number_format($variant->getFinalPrice(), 2) }} zł
+			</div>
+			<div>
+				<a href="{{ route('admin.products.stock', $variant->product) }}" class="btn btn-primary" style="padding: 0.5rem 1rem;">
+					<i class="fas fa-plus"></i> Uzupełnij
+				</a>
+			</div>
+		</div>
+		@endforeach
+	</div>
+</div>
+@endif
 @endsection

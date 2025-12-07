@@ -36,9 +36,11 @@ class Coupon extends Model
     public function calculateDiscount($amount)
     {
         if ($this->type === 'percentage') {
-            return ($amount * $this->value) / 100;
+            $discount = ($amount * $this->value) / 100;
+            return round($discount, 2);
         }
         
-        return min($this->value, $amount);
+        // Fixed amount - nie może przekroczyć wartości zamówienia
+        return round(min((float)$this->value, (float)$amount), 2);
     }
 }

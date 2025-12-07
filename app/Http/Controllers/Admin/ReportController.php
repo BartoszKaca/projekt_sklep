@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -84,18 +85,54 @@ class ReportController extends Controller
 
     public function inventory()
     {
+        // Produkty bez wariantów
         $lowStockProducts = Product::lowStock()
+            ->whereDoesntHave('variants')
             ->with('category')
             ->get();
 
         $outOfStock = Product::where('stock_quantity', 0)
+            ->whereDoesntHave('variants')
             ->with('category')
             ->get();
 
-        $totalValue = Product::selectRaw('SUM(stock_quantity * price) as value')
-            ->first()
-            ->value;
+        // Warianty z niskim stanem
+        $lowStockVariants = \App\Models\ProductVariant::with(['product.category'])
+            ->get()
+            ->filter(function($variant) {
+                return $variant->stock_quantity > 0 && 
+                       $variant->stock_quantity <= $variant->product->low_stock_threshold;
+            });
 
-        return view('admin.reports.inventory', compact('lowStockProducts', 'outOfStock', 'totalValue'));
+        // Warianty wyczerpane
+        $outOfStockVariants = ProductVariant::where('stock_quantity', 0)
+            ->with(['product.category'])
+            ->get();
+
+        // Wartość zapasów (produkty + warianty)
+        $productsValue = Product::whereDoesntHave('variants')
+            ->selectRaw('SUM(stock_quantity * price) as value')
+            ->first()
+            ->value ?? 0;
+
+        $variantsValue = ProductVariant::selectRaw('SUM(product_variants.stock_quantity * (products.price + product_variants.price_modifier)) as value')
+            ->join('products', 'product_variants.product_id', '=', 'products.id')
+            ->first()
+            ->value ?? 0;
+
+        $totalValue = $productsValue + $variantsValue;
+
+        // Łączna liczba jednostek (produkty + warianty)
+        $totalUnits = Product::whereDoesntHave('variants')->sum('stock_quantity') 
+                     + ProductVariant::sum('stock_quantity');
+
+        return view('admin.reports.inventory', compact(
+            'lowStockProducts', 
+            'outOfStock', 
+            'lowStockVariants',
+            'outOfStockVariants',
+            'totalValue',
+            'totalUnits'
+        ));
     }
 }

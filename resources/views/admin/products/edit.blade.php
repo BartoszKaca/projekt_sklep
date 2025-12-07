@@ -609,8 +609,16 @@
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Stan mag.</label>
-                                        <input type="number" name="variants[{{ $index }}][stock_quantity]" class="form-input" 
-                                               value="{{ $variant->stock_quantity }}" min="0">
+                                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                            <input type="number" name="variants[{{ $index }}][stock_quantity]" class="form-input" 
+                                                   value="{{ $variant->stock_quantity }}" min="0" style="flex: 1;">
+                                            <a href="{{ route('admin.products.stock', $product) }}" 
+                                               class="btn btn-sm" 
+                                               style="padding: 0.5rem; background: var(--primary); color: white; border-radius: 6px;"
+                                               title="Zarządzaj stanem">
+                                                <i class="fas fa-warehouse"></i>
+                                            </a>
+                                        </div>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Dopłata (PLN)</label>

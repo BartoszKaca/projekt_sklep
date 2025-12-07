@@ -48,29 +48,34 @@ class CartController extends Controller
 
         $quantity = max(1, (int) $request->quantity);
 
+        // Sprawdź czy produkt ma warianty
+        $hasVariants = $product->variants()->count() > 0;
 
         $variant = null;
         if ($request->variant_id) {
-            $variant = ProductVariant::find($request->variant_id);
+            $variant = ProductVariant::where('id', $request->variant_id)
+                ->where('product_id', $product->id)
+                ->first();
             if (!$variant) {
                 return response()->json(['success' => false, 'message' => 'Wariant nie znaleziony.'], 404);
             }
-            $price = $variant->price ?? $product->getFinalPrice() ?? $product->price;
-            $stock = $variant->stock_quantity ?? null;
+            $price = $variant->getFinalPrice();
+            $stock = $variant->stock_quantity;
             $itemKey = 'v'.$variant->id;
         } else {
-
-            $variant = $product->variants()->first();
-            if ($variant) {
-                $price = $variant->price ?? $product->getFinalPrice() ?? $product->price;
-                $stock = $variant->stock_quantity ?? null;
-                $itemKey = 'v'.$variant->id;
-            } else {
-                $price = $product->getFinalPrice() ?? $product->price;
-                $stock = $product->stock_quantity ?? null; 
-
-                $itemKey = 'p'.$product->id;
+            // Jeśli produkt ma warianty, wymagaj wyboru
+            if ($hasVariants) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Wybierz rozmiar przed dodaniem do koszyka.',
+                    'requires_variant' => true
+                ], 400);
             }
+            
+            // Produkt bez wariantów
+            $price = $product->getFinalPrice() ?? $product->price;
+            $stock = $product->stock_quantity;
+            $itemKey = 'p'.$product->id;
         }
 
 

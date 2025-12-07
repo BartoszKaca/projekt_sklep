@@ -56,6 +56,8 @@ class CheckoutController extends Controller
 
         $appliedCoupon = session('applied_coupon');
         $discount = 0;
+        $coupon = null;
+        
         if ($appliedCoupon) {
             $coupon = Coupon::where('code', $appliedCoupon)->first();
             if ($coupon && $coupon->isValid($cart['total'])) {
@@ -70,8 +72,15 @@ class CheckoutController extends Controller
                 ]);
             } else {
                 // Kupon nieważny - usuń go z sesji
+                $invalidCode = $appliedCoupon; // Zapisz przed usunięciem
                 session()->forget('applied_coupon');
-                Log::warning('Invalid coupon removed from session', ['code' => $appliedCoupon]);
+                $appliedCoupon = null;
+                Log::warning('Invalid coupon removed from session', [
+                    'code' => $invalidCode,
+                    'coupon_exists' => $coupon ? 'yes' : 'no',
+                    'is_valid' => $coupon ? ($coupon->isValid($cart['total']) ? 'yes' : 'no') : 'N/A',
+                    'cart_total' => $cart['total']
+                ]);
             }
         }
 
@@ -88,7 +97,7 @@ class CheckoutController extends Controller
     }
 
 
-    public function applyCoupon(Request $request): RedirectResponse
+    public function applyCoupon(Request $request)
     {
         $request->validate([
             'coupon_code' => 'required|string|max:50',
@@ -105,6 +114,12 @@ class CheckoutController extends Controller
         ]);
 
         if (!$coupon) {
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nieprawidłowy kod kuponu.'
+                ], 400);
+            }
             return redirect()->back()
                 ->with('error', 'Nieprawidłowy kod kuponu.');
         }
@@ -120,8 +135,18 @@ class CheckoutController extends Controller
                 'min_order_value' => $coupon->min_order_value,
                 'cart_total' => $cart['total']
             ]);
+            
+            $errorMessage = 'Kupon jest nieważny lub nie spełniasz wymagań minimalnego zamówienia.';
+            
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage
+                ], 400);
+            }
+            
             return redirect()->back()
-                ->with('error', 'Kupon jest nieważny lub nie spełniasz wymagań minimalnego zamówienia.');
+                ->with('error', $errorMessage);
         }
 
         session(['applied_coupon' => $coupon->code]);
@@ -132,17 +157,37 @@ class CheckoutController extends Controller
             'discount' => $discount
         ]);
 
+        $successMessage = 'Kupon został zastosowany.';
+        
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $successMessage,
+                'discount' => $discount,
+                'coupon_code' => $coupon->code
+            ]);
+        }
+
         return redirect()->back()
-            ->with('success', 'Kupon został zastosowany.');
+            ->with('success', $successMessage);
     }
 
 
-    public function removeCoupon(): RedirectResponse
+    public function removeCoupon(Request $request)
     {
         session()->forget('applied_coupon');
 
+        $successMessage = 'Kupon został usunięty.';
+        
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $successMessage
+            ]);
+        }
+
         return redirect()->back()
-            ->with('success', 'Kupon został usunięty.');
+            ->with('success', $successMessage);
     }
 
 
@@ -197,6 +242,10 @@ class CheckoutController extends Controller
                 if ($coupon && $coupon->isValid($subtotal)) {
                     $discount = $coupon->calculateDiscount($subtotal);
                     $coupon->increment('usage_count');
+                } else {
+                    // Kupon nieważny - usuń z sesji
+                    session()->forget('applied_coupon');
+                    $couponCode = null;
                 }
             }
 

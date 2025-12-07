@@ -536,7 +536,7 @@
             <!-- Products Grid -->
             <div class="products-grid grid-view" id="products-grid">
                 @forelse($products as $product)
-                <div class="product-card">
+                <div class="product-card" data-product-id="{{ $product->id }}" data-slug="{{ $product->slug }}">
                     @if($product->discount_price)
                     <span class="product-badge sale">-{{ $product->getDiscountPercentage() }}%</span>
                     @elseif($product->created_at->gt(now()->subDays(7)))
@@ -553,7 +553,7 @@
 
                             {{-- Akcje widoczne tylko w widoku siatki (grid) --}}
                             <div class="product-actions grid-only">
-                                <button class="product-action-btn" onclick="event.preventDefault(); addToCart('{{ $product->id }}')">
+                                <button class="product-action-btn" onclick="event.preventDefault(); addToCart('{{ $product->id }}', {{ $product->variants && $product->variants->count() > 0 ? 'true' : 'false' }})">
                                     <i class="fas fa-shopping-bag"></i> Dodaj
                                 </button>
                                 <button class="product-action-btn icon-only" onclick="event.preventDefault(); toggleWishlist('{{ $product->id }}')">
@@ -586,7 +586,7 @@
                     
                     {{-- Akcje widoczne tylko w widoku listy --}}
                     <div class="product-actions list-only">
-                        <button class="product-action-btn" onclick="addToCart('{{ $product->id }}')">
+                        <button class="product-action-btn" onclick="addToCart('{{ $product->id }}', {{ $product->variants && $product->variants->count() > 0 ? 'true' : 'false' }})">
                             <i class="fas fa-shopping-bag"></i> Do koszyka
                         </button>
                         <button class="product-action-btn icon-only" onclick="toggleWishlist('{{ $product->id }}')">
@@ -676,9 +676,74 @@
         window.location = '{{ route("products.index") }}';
     }
 
-    function addToCart(productId) {
-        // TODO: Implementacja koszyka
-        alert('Produkt dodany do koszyka!');
+    async function addToCart(productId, hasVariants = false) {
+        // Jeśli produkt ma warianty, przekieruj na stronę produktu
+        if (hasVariants) {
+            const productSlug = document.querySelector(`[data-product-id="${productId}"]`)?.dataset?.slug;
+            if (productSlug) {
+                window.location.href = `/products/${productSlug}`;
+            } else {
+                window.location.href = `/products/${productId}`;
+            }
+            return;
+        }
+
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (!token) {
+            alert('Błąd: Brak tokenu CSRF');
+            return;
+        }
+
+        try {
+            const res = await fetch("{{ route('cart.add') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    variant_id: null,
+                    quantity: 1
+                })
+            });
+
+            const data = await res.json();
+            
+            if (!res.ok || !data.success) {
+                // Jeśli produkt wymaga wyboru wariantu, przekieruj na stronę produktu
+                if (data.requires_variant || (data.message && (data.message.includes('wariant') || data.message.includes('rozmiar') || data.message.includes('Wybierz')))) {
+                    const productSlug = document.querySelector(`[data-product-id="${productId}"]`)?.dataset?.slug;
+                    if (productSlug) {
+                        window.location.href = `/products/${productSlug}`;
+                    } else {
+                        // Fallback - spróbuj znaleźć slug z linku
+                        const productLink = document.querySelector(`[data-product-id="${productId}"]`)?.closest('.product-card')?.querySelector('a.product-image-link');
+                        if (productLink) {
+                            window.location.href = productLink.href;
+                        } else {
+                            window.location.href = `/products/${productId}`;
+                        }
+                    }
+                    return;
+                }
+                alert(data.message || 'Błąd dodawania do koszyka');
+                return;
+            }
+
+            // Aktualizuj licznik koszyka
+            const cartCountEl = document.getElementById('cart-count');
+            if (cartCountEl) {
+                cartCountEl.textContent = data.cart_count ?? cartCountEl.textContent;
+            }
+
+            // Pokaż powiadomienie
+            alert(data.message || 'Dodano do koszyka');
+        } catch (err) {
+            console.error(err);
+            alert('Błąd komunikacji z serwerem.');
+        }
     }
 
     // Automatyczne submittowanie formularza przy zmianie checkbox/radio

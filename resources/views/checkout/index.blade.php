@@ -566,25 +566,41 @@
                 <!-- Coupon -->
                 @if($appliedCoupon)
                 <div class="applied-coupon">
-                    <span><i class="fas fa-tag"></i> {{ $appliedCoupon }}</span>
-                    <form action="{{ route('checkout.coupon.remove') }}" method="POST" style="display: inline;">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" title="Usuń kupon"><i class="fas fa-times"></i></button>
-                    </form>
+                    <div>
+                        <span><i class="fas fa-tag"></i> {{ $appliedCoupon }}</span>
+                        @if($discount > 0)
+                        <div style="font-size: 0.875rem; color: var(--success); margin-top: 0.25rem;">
+                            Rabat: -{{ number_format($discount, 2) }} zł
+                        </div>
+                        @else
+                        <div style="font-size: 0.875rem; color: var(--warning); margin-top: 0.25rem;">
+                            <i class="fas fa-exclamation-triangle"></i> Kupon zastosowany, ale rabat = 0 zł
+                        </div>
+                        @endif
+                    </div>
+                    <button type="button" id="remove-coupon-btn" title="Usuń kupon" style="background: none; border: none; color: var(--gray); cursor: pointer; padding: 0.25rem 0.5rem;">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                {{-- Debug info --}}
-                @if(config('app.debug'))
-                <div style="background: #fef3c7; padding: 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-bottom: 0.5rem;">
-                    Debug: Coupon={{ $appliedCoupon }}, Discount={{ $discount }}, Cart={{ $cart['total'] }}
-                </div>
-                @endif
                 @else
-                <form action="{{ route('checkout.coupon') }}" method="POST" class="coupon-form">
-                    @csrf
-                    <input type="text" name="coupon_code" placeholder="Kod rabatowy">
-                    <button type="submit">Zastosuj</button>
-                </form>
+                <div style="margin-bottom: 1rem;">
+                    <form id="coupon-form" class="coupon-form" onsubmit="return false;">
+                        @csrf
+                        <input type="text" id="coupon_code" name="coupon_code" placeholder="Kod rabatowy" value="{{ old('coupon_code') }}" required style="text-transform: uppercase;">
+                        <button type="button" id="apply-coupon-btn">Zastosuj</button>
+                    </form>
+                    <div id="coupon-message" style="margin-top: 0.5rem;"></div>
+                    @if(session('error'))
+                    <div style="color: var(--danger); font-size: 0.875rem; margin-top: 0.5rem; padding: 0.5rem; background: rgba(239, 68, 68, 0.1); border-radius: 6px;">
+                        <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
+                    </div>
+                    @endif
+                    @if(session('success'))
+                    <div style="color: var(--success); font-size: 0.875rem; margin-top: 0.5rem; padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 6px;">
+                        <i class="fas fa-check-circle"></i> {{ session('success') }}
+                    </div>
+                    @endif
+                </div>
                 @endif
 
                 <div class="summary-row">
@@ -668,7 +684,7 @@
         }
     }
     
-    // Initialize on page load
+    // Coupon form handling with AJAX
     document.addEventListener('DOMContentLoaded', function() {
         const savedAddress = document.getElementById('saved-address');
         if (savedAddress && savedAddress.value) {
@@ -677,7 +693,139 @@
         
         // Update total on load to ensure correct display
         updateTotal();
+        
+        // Apply coupon button
+        const applyCouponBtn = document.getElementById('apply-coupon-btn');
+        if (applyCouponBtn) {
+            applyCouponBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const couponCode = document.getElementById('coupon_code').value.trim().toUpperCase();
+                const messageDiv = document.getElementById('coupon-message');
+                
+                if (!couponCode) {
+                    showCouponMessage('Wprowadź kod kuponu', 'error');
+                    return;
+                }
+                
+                // Disable button during request
+                applyCouponBtn.disabled = true;
+                applyCouponBtn.textContent = 'Sprawdzam...';
+                
+                // Get CSRF token
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
+                    || document.querySelector('input[name="_token"]')?.value;
+                
+                // Send AJAX request
+                fetch('{{ route("checkout.coupon") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        coupon_code: couponCode
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => Promise.reject(err));
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        showCouponMessage(data.message || 'Kupon został zastosowany.', 'success');
+                        // Reload page after short delay to show updated discount
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showCouponMessage(data.message || 'Nieprawidłowy kod kuponu.', 'error');
+                        applyCouponBtn.disabled = false;
+                        applyCouponBtn.textContent = 'Zastosuj';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    const errorMessage = error.message || error.error || 'Wystąpił błąd. Spróbuj ponownie.';
+                    showCouponMessage(errorMessage, 'error');
+                    applyCouponBtn.disabled = false;
+                    applyCouponBtn.textContent = 'Zastosuj';
+                });
+            });
+        }
+        
+        // Remove coupon button
+        const removeCouponBtn = document.getElementById('remove-coupon-btn');
+        if (removeCouponBtn) {
+            removeCouponBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Get CSRF token
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
+                    || document.querySelector('input[name="_token"]')?.value;
+                
+                // Send AJAX request
+                fetch('{{ route("checkout.coupon.remove") }}', {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => Promise.reject(err));
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Reload page to show updated state
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Still reload to ensure state is correct
+                    window.location.reload();
+                });
+            });
+        }
+        
+        // Allow Enter key to submit coupon form
+        const couponCodeInput = document.getElementById('coupon_code');
+        if (couponCodeInput) {
+            couponCodeInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (applyCouponBtn) {
+                        applyCouponBtn.click();
+                    }
+                }
+            });
+        }
     });
+    
+    function showCouponMessage(message, type) {
+        const messageDiv = document.getElementById('coupon-message');
+        if (!messageDiv) return;
+        
+        const color = type === 'error' ? 'var(--danger)' : 'var(--success)';
+        const bgColor = type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+        const icon = type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle';
+        
+        messageDiv.innerHTML = `
+            <div style="color: ${color}; font-size: 0.875rem; padding: 0.5rem; background: ${bgColor}; border-radius: 6px;">
+                <i class="fas ${icon}"></i> ${message}
+            </div>
+        `;
+    }
 </script>
 @endpush
 @endsection

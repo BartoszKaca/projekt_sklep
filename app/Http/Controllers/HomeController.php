@@ -124,7 +124,7 @@ class HomeController extends Controller
         }
 
         // Paginacja z zachowaniem parametrów
-        $products = $query->paginate(20)->withQueryString();
+        $products = $query->with('variants')->paginate(20)->withQueryString();
         
         // Pobierz kategorie z liczbą produktów
         $categories = Category::active()
