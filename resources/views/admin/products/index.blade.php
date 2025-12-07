@@ -377,7 +377,7 @@
                     <div class="product-cell">
                         <div class="product-image">
                             @if($product->primaryImage)
-                            <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}">
+                            <img src="{{ asset('storage/' . $product->primaryImage->path) }}" alt="{{ $product->name }}" width = "80px" height = "80px" >
                             @else
                             <i class="fas fa-compact-disc"></i>
                             @endif

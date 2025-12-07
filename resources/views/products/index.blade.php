@@ -73,7 +73,7 @@
     }
 
     .price-range {
-        display: flex;
+        display: flex-wrap;
         gap: 0.5rem;
         align-items: center;
     }
