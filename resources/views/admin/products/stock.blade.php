@@ -151,6 +151,9 @@
                     </div>
                     <div style="font-size: 0.875rem; color: var(--gray);">
                         <strong>{{ ucfirst(str_replace('_', ' ', $movement->reason)) }}</strong>
+                        @if($movement->variant)
+                        • Wariant: {{ $movement->variant->size ?? 'N/A' }} @if($movement->variant->color) ({{ $movement->variant->color }}) @endif
+                        @endif
                         @if($movement->reference)
                         • {{ $movement->reference }}
                         @endif
@@ -208,6 +211,36 @@
                         <span style="font-size: 0.875rem; font-weight: 400;">szt.</span>
                     </div>
                 </div>
+
+                @if($product->variants && $product->variants->count() > 0)
+                <div style="padding-top: 1rem; border-top: 1px solid var(--border);">
+                    <div style="font-size: 0.75rem; color: var(--gray); text-transform: uppercase; margin-bottom: 0.75rem;">Warianty</div>
+                    @foreach($product->variants as $variant)
+                    <div style="padding: 0.75rem; background: var(--light-gray); border-radius: 8px; margin-bottom: 0.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600;">{{ $variant->size ?? 'N/A' }}</div>
+                                @if($variant->color)
+                                <div style="font-size: 0.75rem; color: var(--gray);">{{ $variant->color }}</div>
+                                @endif
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: 700;">{{ $variant->stock_quantity }} szt.</div>
+                            </div>
+                        </div>
+                        <form method="POST" action="{{ route('admin.variants.adjust-stock', $variant) }}" style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+                            @csrf
+                            <input type="hidden" name="type" value="in">
+                            <input type="number" name="quantity" value="1" min="1" style="flex: 1; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border);" required>
+                            <input type="hidden" name="reason" value="restock">
+                            <button type="submit" style="padding: 0.4rem 0.75rem; background: var(--success); color: white; border: none; border-radius: 6px; cursor: pointer;" title="Dodaj dostawę">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </form>
+                    </div>
+                    @endforeach
+                </div>
+                @endif
 
                 <div style="padding: 1rem; background: var(--light-gray); border-radius: 10px;">
                     <div style="font-size: 0.75rem; color: var(--gray); text-transform: uppercase; margin-bottom: 0.5rem;">Próg niskiego stanu</div>

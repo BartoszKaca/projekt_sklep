@@ -263,10 +263,12 @@ class CheckoutController extends Controller
 
                 if ($variant) {
                     if ($variant->stock_quantity !== null) {
-                        $variant->decrement('stock_quantity', $item['quantity']);
+                        $variant->decreaseStock($item['quantity'], $order->id);
                     }
                 } else {
                     $product->decreaseStock($item['quantity']);
+                    // Link movement to order
+                    $product->stockMovements()->latest()->first()->update(['order_id' => $order->id]);
                 }
             }
 

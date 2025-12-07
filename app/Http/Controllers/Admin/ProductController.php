@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -223,8 +224,9 @@ class ProductController extends Controller
 
     public function stock(Product $product)
     {
+        $product->load('variants');
         $movements = $product->stockMovements()
-            ->with('user')
+            ->with(['user', 'variant'])
             ->latest()
             ->paginate(20);
 
@@ -264,5 +266,47 @@ class ProductController extends Controller
         ]);
 
         return back()->with('success', 'Stan magazynowy został zaktualizowany!');
+    }
+
+    public function adjustVariantStock(Request $request, ProductVariant $variant)
+    {
+        $validated = $request->validate([
+            'type' => 'required|in:in,out,adjustment',
+            'quantity' => 'required|integer|min:1',
+            'reason' => 'required|string',
+            'reference' => 'nullable|string',
+        ]);
+
+        $stockBefore = $variant->stock_quantity;
+
+        if ($validated['type'] === 'in') {
+            $variant->increaseStock($validated['quantity'], $validated['reason'], $validated['reference'], auth()->id());
+        } elseif ($validated['type'] === 'out') {
+            if ($variant->stock_quantity < $validated['quantity']) {
+                return back()->withErrors(['quantity' => 'Niewystarczająca ilość na stanie!']);
+            }
+            $variant->decreaseStock($validated['quantity']);
+            // Update reason and reference
+            $variant->stockMovements()->latest()->first()->update([
+                'reason' => $validated['reason'],
+                'reference' => $validated['reference'],
+                'user_id' => auth()->user()->id,
+            ]);
+        } else {
+            $variant->update(['stock_quantity' => $validated['quantity']]);
+            StockMovement::create([
+                'product_id' => $variant->product_id,
+                'product_variant_id' => $variant->id,
+                'type' => 'adjustment',
+                'quantity' => $validated['quantity'],
+                'stock_before' => $stockBefore,
+                'stock_after' => $variant->stock_quantity,
+                'reason' => $validated['reason'],
+                'reference' => $validated['reference'] ?? null,
+                'user_id' => auth()->user()->id ?? null,
+            ]);
+        }
+
+        return back()->with('success', 'Stan magazynowy wariantu został zaktualizowany!');
     }
 }

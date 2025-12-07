@@ -106,6 +106,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('products', AdminProductController::class);
     Route::get('products/{product}/stock', [AdminProductController::class, 'stock'])->name('products.stock');
     Route::post('products/{product}/adjust-stock', [AdminProductController::class, 'adjustStock'])->name('products.adjust-stock');
+    Route::post('variants/{variant}/adjust-stock', [AdminProductController::class, 'adjustVariantStock'])->name('variants.adjust-stock');
 
     // Kategorie
     Route::resource('categories', AdminCategoryController::class)->except(['show', 'create', 'edit']);
