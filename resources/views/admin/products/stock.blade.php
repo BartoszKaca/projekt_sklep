@@ -326,14 +326,14 @@
 document.addEventListener('DOMContentLoaded', function() {
     const variantSelect = document.getElementById('variant-select');
     if (variantSelect) {
-        const variants = @json($product->variants->keyBy('id')->map(function($v) {
+        const variants = @json(($product->variants ?? collect())->keyBy('id')->map(function($v) {
             return [
                 'id' => $v->id,
-                'size' => $v->size,
-                'color' => $v->color,
-                'stock' => $v->stock_quantity
+                'size' => $v->size ?? null,
+                'color' => $v->color ?? null,
+                'stock' => $v->stock_quantity ?? 0
             ];
-        }));
+        })->toArray());
         
         // Opcjonalnie: pokaż aktualny stan wariantu przy zmianie
         variantSelect.addEventListener('change', function() {

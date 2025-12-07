@@ -265,13 +265,23 @@ class ProductController extends Controller
 
     public function stock(Product $product)
     {
-        $product->load('variants');
-        $movements = $product->stockMovements()
-            ->with(['user', 'variant'])
-            ->latest()
-            ->paginate(20);
+        try {
+            $product->load(['variants', 'category']);
+            $movements = $product->stockMovements()
+                ->with(['user', 'variant'])
+                ->latest()
+                ->paginate(20);
 
-        return view('admin.products.stock', compact('product', 'movements'));
+            return view('admin.products.stock', compact('product', 'movements'));
+        } catch (\Exception $e) {
+            \Log::error('Stock page error: ' . $e->getMessage(), [
+                'product_id' => $product->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->route('admin.products.index')
+                ->with('error', 'Wystąpił błąd podczas ładowania strony stanu magazynowego.');
+        }
     }
 
     public function adjustStock(Request $request, Product $product)

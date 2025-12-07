@@ -85,11 +85,12 @@ class ReportController extends Controller
 
     public function inventory()
     {
-        // Produkty bez wariantów
-        $lowStockProducts = Product::lowStock()
-            ->whereDoesntHave('variants')
-            ->with('category')
-            ->get();
+        try {
+            // Produkty bez wariantów
+            $lowStockProducts = Product::lowStock()
+                ->whereDoesntHave('variants')
+                ->with('category')
+                ->get();
 
         $outOfStock = Product::where('stock_quantity', 0)
             ->whereDoesntHave('variants')
@@ -110,15 +111,15 @@ class ReportController extends Controller
             ->get();
 
         // Wartość zapasów (produkty + warianty)
-        $productsValue = Product::whereDoesntHave('variants')
+        $productsValueResult = Product::whereDoesntHave('variants')
             ->selectRaw('SUM(stock_quantity * price) as value')
-            ->first()
-            ->value ?? 0;
+            ->first();
+        $productsValue = $productsValueResult && $productsValueResult->value ? $productsValueResult->value : 0;
 
-        $variantsValue = ProductVariant::selectRaw('SUM(product_variants.stock_quantity * (products.price + product_variants.price_modifier)) as value')
+        $variantsValueResult = ProductVariant::selectRaw('SUM(product_variants.stock_quantity * (products.price + product_variants.price_modifier)) as value')
             ->join('products', 'product_variants.product_id', '=', 'products.id')
-            ->first()
-            ->value ?? 0;
+            ->first();
+        $variantsValue = $variantsValueResult && $variantsValueResult->value ? $variantsValueResult->value : 0;
 
         $totalValue = $productsValue + $variantsValue;
 
@@ -126,13 +127,21 @@ class ReportController extends Controller
         $totalUnits = Product::whereDoesntHave('variants')->sum('stock_quantity') 
                      + ProductVariant::sum('stock_quantity');
 
-        return view('admin.reports.inventory', compact(
-            'lowStockProducts', 
-            'outOfStock', 
-            'lowStockVariants',
-            'outOfStockVariants',
-            'totalValue',
-            'totalUnits'
-        ));
+            return view('admin.reports.inventory', compact(
+                'lowStockProducts', 
+                'outOfStock', 
+                'lowStockVariants',
+                'outOfStockVariants',
+                'totalValue',
+                'totalUnits'
+            ));
+        } catch (\Exception $e) {
+            \Log::error('Inventory report error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'Wystąpił błąd podczas generowania raportu inwentarza.');
+        }
     }
 }
