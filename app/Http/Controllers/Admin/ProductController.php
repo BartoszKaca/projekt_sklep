@@ -177,27 +177,68 @@ class ProductController extends Controller
                             // Update existing variant
                             $variant = ProductVariant::find($variantData['id']);
                             if ($variant && $variant->product_id === $product->id) {
+                                $oldStock = $variant->stock_quantity;
+                                $newStock = $variantData['stock_quantity'] ?? 0;
+                                
                                 $variant->update([
                                     'name' => $variantName ?: $variant->name,
                                     'size' => $variantData['size'] ?? null,
                                     'color' => $variantData['color'] ?? null,
-                                    'stock_quantity' => $variantData['stock_quantity'] ?? 0,
+                                    'stock_quantity' => $newStock,
                                     'price_modifier' => $variantData['price_modifier'] ?? 0,
                                 ]);
+                                
+                                // Twórz ruch magazynowy jeśli zmienił się stan
+                                if ($oldStock != $newStock) {
+                                    $difference = $newStock - $oldStock;
+                                    $type = $difference > 0 ? 'in' : 'out';
+                                    $quantity = abs($difference);
+                                    
+                                    StockMovement::create([
+                                        'product_id' => $product->id,
+                                        'product_variant_id' => $variant->id,
+                                        'type' => $type,
+                                        'quantity' => $quantity,
+                                        'stock_before' => $oldStock,
+                                        'stock_after' => $newStock,
+                                        'reason' => 'manual_adjustment',
+                                        'reference' => 'Edycja produktu',
+                                        'user_id' => auth()->id(),
+                                    ]);
+                                }
+                                
                                 $existingVariantIds[] = $variant->id;
                             }
                         } else {
                             // Create new variant
+                            $newStock = $variantData['stock_quantity'] ?? 0;
+                            
                             $variant = ProductVariant::create([
                                 'product_id' => $product->id,
                                 'name' => $variantName ?: 'Wariant ' . ($index + 1),
                                 'size' => $variantData['size'] ?? null,
                                 'color' => $variantData['color'] ?? null,
-                                'stock_quantity' => $variantData['stock_quantity'] ?? 0,
+                                'stock_quantity' => $newStock,
                                 'price_modifier' => $variantData['price_modifier'] ?? 0,
                                 'sku' => $product->sku . '-' . strtoupper($variantData['size'] ?? 'V' . time()),
                                 'is_active' => true,
                             ]);
+                            
+                            // Twórz ruch magazynowy dla nowego wariantu z początkowym stanem
+                            if ($newStock > 0) {
+                                StockMovement::create([
+                                    'product_id' => $product->id,
+                                    'product_variant_id' => $variant->id,
+                                    'type' => 'in',
+                                    'quantity' => $newStock,
+                                    'stock_before' => 0,
+                                    'stock_after' => $newStock,
+                                    'reason' => 'initial_stock',
+                                    'reference' => 'Dodanie nowego wariantu',
+                                    'user_id' => auth()->id(),
+                                ]);
+                            }
+                            
                             $existingVariantIds[] = $variant->id;
                         }
                     }
@@ -236,12 +277,48 @@ class ProductController extends Controller
     public function adjustStock(Request $request, Product $product)
     {
         $validated = $request->validate([
+            'variant_id' => 'nullable|integer|exists:product_variants,id',
             'type' => 'required|in:in,out,adjustment',
             'quantity' => 'required|integer|min:1',
             'reason' => 'required|string',
             'reference' => 'nullable|string',
         ]);
 
+        // Jeśli wybrano wariant, obsłuż go osobno
+        if (!empty($validated['variant_id'])) {
+            $variant = ProductVariant::where('id', $validated['variant_id'])
+                ->where('product_id', $product->id)
+                ->firstOrFail();
+            
+            $stockBefore = $variant->stock_quantity;
+
+            if ($validated['type'] === 'in') {
+                $variant->increment('stock_quantity', $validated['quantity']);
+            } elseif ($validated['type'] === 'out') {
+                if ($variant->stock_quantity < $validated['quantity']) {
+                    return back()->withErrors(['quantity' => 'Niewystarczająca ilość na stanie wariantu!']);
+                }
+                $variant->decrement('stock_quantity', $validated['quantity']);
+            } else {
+                $variant->update(['stock_quantity' => $validated['quantity']]);
+            }
+
+            StockMovement::create([
+                'product_id' => $product->id,
+                'product_variant_id' => $variant->id,
+                'type' => $validated['type'],
+                'quantity' => $validated['quantity'],
+                'stock_before' => $stockBefore,
+                'stock_after' => $variant->fresh()->stock_quantity,
+                'reason' => $validated['reason'],
+                'reference' => $validated['reference'] ?? null,
+                'user_id' => auth()->user()->id ?? null,
+            ]);
+
+            return back()->with('success', 'Stan magazynowy wariantu został zaktualizowany!');
+        }
+
+        // Obsługa produktu głównego (bez wariantu)
         $stockBefore = $product->stock_quantity;
 
         if ($validated['type'] === 'in') {

@@ -80,6 +80,25 @@
             <form method="POST" action="{{ route('admin.products.adjust-stock', $product) }}">
                 @csrf
 
+                @if($product->variants && $product->variants->count() > 0)
+                <div class="form-group">
+                    <label class="form-label">Wariant / Rozmiar</label>
+                    <select name="variant_id" id="variant-select" class="form-select">
+                        <option value="">Produkt główny (bez wariantu)</option>
+                        @foreach($product->variants as $variant)
+                            <option value="{{ $variant->id }}">
+                                {{ $variant->size ?? 'N/A' }}
+                                @if($variant->color)
+                                    - {{ $variant->color }}
+                                @endif
+                                (stan: {{ $variant->stock_quantity }} szt.)
+                            </option>
+                        @endforeach
+                    </select>
+                    <div class="form-help">Wybierz wariant, którego stan chcesz zmienić, lub pozostaw puste dla produktu głównego</div>
+                </div>
+                @endif
+
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Typ ruchu</label>
@@ -301,4 +320,28 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const variantSelect = document.getElementById('variant-select');
+    if (variantSelect) {
+        const variants = @json($product->variants->keyBy('id')->map(function($v) {
+            return [
+                'id' => $v->id,
+                'size' => $v->size,
+                'color' => $v->color,
+                'stock' => $v->stock_quantity
+            ];
+        }));
+        
+        // Opcjonalnie: pokaż aktualny stan wariantu przy zmianie
+        variantSelect.addEventListener('change', function() {
+            const variantId = this.value;
+            // Można dodać podgląd stanu, ale nie jest konieczne
+        });
+    }
+});
+</script>
+@endpush
 @endsection
