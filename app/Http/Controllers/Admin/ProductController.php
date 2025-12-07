@@ -70,6 +70,11 @@ class ProductController extends Controller
             'weight' => 'nullable|numeric|min:0',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
+            'variants' => 'nullable|array',
+            'variants.*.size' => 'nullable|string|max:10',
+            'variants.*.color' => 'nullable|string|max:50',
+            'variants.*.stock_quantity' => 'nullable|integer|min:0',
+            'variants.*.price_modifier' => 'nullable|numeric',
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
@@ -79,6 +84,25 @@ class ProductController extends Controller
         $validated['is_featured'] = $request->has('is_featured') ? 1 : 0;
         
         $product = Product::create($validated);
+
+        // Obsługa wariantów (rozmiarów)
+        if ($request->has('variants') && $validated['type'] === 'merch') {
+            foreach ($request->variants as $index => $variantData) {
+                if (!empty($variantData['size']) || !empty($variantData['color'])) {
+                    $variantName = trim(($variantData['size'] ?? '') . ' ' . ($variantData['color'] ?? ''));
+                    ProductVariant::create([
+                        'product_id' => $product->id,
+                        'name' => $variantName ?: 'Wariant ' . ($index + 1),
+                        'size' => $variantData['size'] ?? null,
+                        'color' => $variantData['color'] ?? null,
+                        'stock_quantity' => $variantData['stock_quantity'] ?? 0,
+                        'price_modifier' => $variantData['price_modifier'] ?? 0,
+                        'sku' => $product->sku . '-' . strtoupper($variantData['size'] ?? 'V' . $index),
+                        'is_active' => true,
+                    ]);
+                }
+            }
+        }
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $index => $image) {
@@ -123,6 +147,12 @@ class ProductController extends Controller
             'weight' => 'nullable|numeric|min:0',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
+            'variants' => 'nullable|array',
+            'variants.*.id' => 'nullable|integer|exists:product_variants,id',
+            'variants.*.size' => 'nullable|string|max:10',
+            'variants.*.color' => 'nullable|string|max:50',
+            'variants.*.stock_quantity' => 'nullable|integer|min:0',
+            'variants.*.price_modifier' => 'nullable|numeric',
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
@@ -132,6 +162,53 @@ class ProductController extends Controller
         $validated['is_featured'] = $request->has('is_featured') ? 1 : 0;
         
         $product->update($validated);
+
+        // Obsługa wariantów (rozmiarów)
+        if ($validated['type'] === 'merch') {
+            $existingVariantIds = [];
+            
+            if ($request->has('variants')) {
+                foreach ($request->variants as $index => $variantData) {
+                    if (!empty($variantData['size']) || !empty($variantData['color'])) {
+                        $variantName = trim(($variantData['size'] ?? '') . ' ' . ($variantData['color'] ?? ''));
+                        
+                        if (!empty($variantData['id'])) {
+                            // Update existing variant
+                            $variant = ProductVariant::find($variantData['id']);
+                            if ($variant && $variant->product_id === $product->id) {
+                                $variant->update([
+                                    'name' => $variantName ?: $variant->name,
+                                    'size' => $variantData['size'] ?? null,
+                                    'color' => $variantData['color'] ?? null,
+                                    'stock_quantity' => $variantData['stock_quantity'] ?? 0,
+                                    'price_modifier' => $variantData['price_modifier'] ?? 0,
+                                ]);
+                                $existingVariantIds[] = $variant->id;
+                            }
+                        } else {
+                            // Create new variant
+                            $variant = ProductVariant::create([
+                                'product_id' => $product->id,
+                                'name' => $variantName ?: 'Wariant ' . ($index + 1),
+                                'size' => $variantData['size'] ?? null,
+                                'color' => $variantData['color'] ?? null,
+                                'stock_quantity' => $variantData['stock_quantity'] ?? 0,
+                                'price_modifier' => $variantData['price_modifier'] ?? 0,
+                                'sku' => $product->sku . '-' . strtoupper($variantData['size'] ?? 'V' . time()),
+                                'is_active' => true,
+                            ]);
+                            $existingVariantIds[] = $variant->id;
+                        }
+                    }
+                }
+            }
+            
+            // Delete removed variants
+            $product->variants()->whereNotIn('id', $existingVariantIds)->delete();
+        } else {
+            // If type changed from merch to album, remove all variants
+            $product->variants()->delete();
+        }
 
         return redirect()->route('admin.products.index')
             ->with('success', 'Produkt został zaktualizowany!');

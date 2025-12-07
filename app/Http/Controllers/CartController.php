@@ -84,7 +84,10 @@ class CartController extends Controller
                 'product_id' => $product->id,
                 'variant_id' => $variant ? $variant->id : null,
                 'name' => $product->name,
-                'price' => (float) $price,
+                'variant_name' => $variant ? $variant->name : null,
+                'size' => $variant ? $variant->size : null,
+                'color' => $variant ? $variant->color : null,
+                'price' => (float) ($variant ? $variant->getFinalPrice() : ($product->getFinalPrice() ?? $product->price)),
                 'quantity' => $quantity,
                 'slug' => $product->slug,
                 'image' => optional($product->primaryImage)->path ?? null,
@@ -125,6 +128,32 @@ class CartController extends Controller
         if ($qty <= 0) {
             unset($cart['items'][$key]);
         } else {
+            // Sprawdź stan magazynowy przed aktualizacją
+            $item = $cart['items'][$key];
+            $product = Product::find($item['product_id']);
+            
+            if (!$product) {
+                return response()->json(['success' => false, 'message' => 'Produkt nie znaleziony'], 404);
+            }
+
+            $stock = null;
+            if ($item['variant_id']) {
+                $variant = ProductVariant::find($item['variant_id']);
+                if (!$variant) {
+                    return response()->json(['success' => false, 'message' => 'Wariant nie znaleziony'], 404);
+                }
+                $stock = $variant->stock_quantity;
+            } else {
+                $stock = $product->stock_quantity;
+            }
+
+            if ($stock !== null && $stock < $qty) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => "Dostępne tylko {$stock} sztuk w magazynie."
+                ], 400);
+            }
+
             $cart['items'][$key]['quantity'] = $qty;
         }
 

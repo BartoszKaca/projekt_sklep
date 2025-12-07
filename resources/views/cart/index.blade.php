@@ -35,6 +35,16 @@
 
                         <div style="flex:1;">
                             <a href="{{ route('products.show', $it['slug'] ?? $it['product_id']) }}"><strong>{{ $it['name'] }}</strong></a>
+                            @if(!empty($it['size']) || !empty($it['color']))
+                                <div style="margin-top:0.25rem; font-size:0.875rem; color:var(--gray);">
+                                    @if(!empty($it['size']))
+                                        <span style="background:var(--light-gray); padding:0.2rem 0.5rem; border-radius:4px; font-weight:600;">{{ $it['size'] }}</span>
+                                    @endif
+                                    @if(!empty($it['color']))
+                                        <span style="margin-left:0.25rem;">{{ $it['color'] }}</span>
+                                    @endif
+                                </div>
+                            @endif
                             <div style="margin-top:0.25rem;">
                                 Cena: {{ number_format($it['price'],2) }} zł
                             </div>

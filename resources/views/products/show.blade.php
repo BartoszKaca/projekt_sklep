@@ -14,6 +14,58 @@
     .product-thumbs { display:flex; gap:0.5rem; margin-top:1rem; }
     .product-thumbs img { width:72px; height:72px; object-fit:cover; border-radius:8px; }
     .product-meta { background: white; padding: 1.5rem; border-radius: 12px; border:1px solid var(--border); }
+    
+    /* Size buttons */
+    .size-selector { margin-top: 1rem; }
+    .size-selector-label { font-weight: 600; margin-bottom: 0.5rem; display: block; }
+    .size-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .size-btn {
+        min-width: 50px;
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border);
+        background: white;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+    }
+    .size-btn:hover:not(.disabled) {
+        border-color: var(--primary);
+        background: rgba(99, 102, 241, 0.05);
+    }
+    .size-btn.selected {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: white;
+    }
+    .size-btn.disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        text-decoration: line-through;
+    }
+    .size-btn .stock-info {
+        font-size: 0.7rem;
+        font-weight: 400;
+        display: block;
+        margin-top: 2px;
+        opacity: 0.7;
+    }
+    .selected-variant-info {
+        margin-top: 0.75rem;
+        padding: 0.75rem;
+        background: var(--light-gray);
+        border-radius: 8px;
+        font-size: 0.875rem;
+    }
+    .variant-price {
+        font-weight: 700;
+        color: var(--primary);
+    }
+    
+    @media (max-width: 768px) {
+        .product-page { grid-template-columns: 1fr; }
+    }
 </style>
 @endpush
 
@@ -74,13 +126,49 @@
 
             <div style="margin-top:1rem;">
                 @if($product->variants && $product->variants->count())
-                    <label for="variant">Wybierz wariant</label>
-                    <select id="variant" style="display:block; margin-top:0.5rem; padding:0.75rem; border-radius:8px; width:100%;">
-                        <option value="">-- wybierz --</option>
-                        @foreach($product->variants as $variant)
-                            <option value="{{ $variant->id }}" data-price="{{ $variant->price ?? $product->getFinalPrice() }}">{{ $variant->name ?? ($variant->sku ?? 'Wariant') }} @if($variant->price) - {{ number_format($variant->price,2) }} zł @endif (stan: {{ $variant->stock_quantity }})</option>
-                        @endforeach
-                    </select>
+                    <input type="hidden" id="variant" value="">
+                    
+                    {{-- Group variants by size --}}
+                    @php
+                        $sizes = $product->variants->whereNotNull('size')->groupBy('size');
+                        $colors = $product->variants->whereNotNull('color')->pluck('color')->unique();
+                    @endphp
+                    
+                    @if($sizes->count() > 0)
+                    <div class="size-selector">
+                        <label class="size-selector-label">Wybierz rozmiar:</label>
+                        <div class="size-buttons">
+                            @foreach($product->variants as $variant)
+                                <button type="button" 
+                                        class="size-btn {{ $variant->stock_quantity <= 0 ? 'disabled' : '' }}"
+                                        data-variant-id="{{ $variant->id }}"
+                                        data-price="{{ $variant->getFinalPrice() }}"
+                                        data-stock="{{ $variant->stock_quantity }}"
+                                        data-size="{{ $variant->size }}"
+                                        data-color="{{ $variant->color }}"
+                                        data-modifier="{{ $variant->price_modifier }}"
+                                        {{ $variant->stock_quantity <= 0 ? 'disabled' : '' }}
+                                        onclick="selectSize(this)">
+                                    {{ $variant->size }}
+                                    @if($variant->color)
+                                        <span style="font-size:0.75rem; opacity:0.7;">{{ $variant->color }}</span>
+                                    @endif
+                                    <span class="stock-info">
+                                        @if($variant->stock_quantity > 0)
+                                            {{ $variant->stock_quantity }} szt.
+                                        @else
+                                            Brak
+                                        @endif
+                                    </span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+                    
+                    <div id="selected-variant-info" class="selected-variant-info" style="display:none;">
+                        <span id="variant-details"></span>
+                    </div>
                 @endif
 
                 <div style="margin-top:0.75rem;">
@@ -116,10 +204,60 @@
 
 @push('scripts')
 <script>
+    const basePrice = {{ $product->getFinalPrice() }};
+    
+    function selectSize(btn) {
+        if (btn.disabled) return;
+        
+        // Remove selection from all buttons
+        document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+        
+        // Select this button
+        btn.classList.add('selected');
+        
+        // Update hidden input
+        document.getElementById('variant').value = btn.dataset.variantId;
+        
+        // Show variant info
+        const infoDiv = document.getElementById('selected-variant-info');
+        const detailsSpan = document.getElementById('variant-details');
+        
+        const size = btn.dataset.size;
+        const color = btn.dataset.color;
+        const price = parseFloat(btn.dataset.price);
+        const stock = parseInt(btn.dataset.stock);
+        const modifier = parseFloat(btn.dataset.modifier);
+        
+        let details = `<strong>Rozmiar: ${size}</strong>`;
+        if (color) details += ` | Kolor: ${color}`;
+        details += ` | Dostępne: ${stock} szt.`;
+        
+        if (modifier > 0) {
+            details += ` | <span class="variant-price">+${modifier.toFixed(2)} zł</span>`;
+        }
+        
+        detailsSpan.innerHTML = details;
+        infoDiv.style.display = 'block';
+        
+        // Update main price display
+        const priceDisplay = document.querySelector('.product-meta [style*="font-size:1.75rem"]');
+        if (priceDisplay) {
+            priceDisplay.textContent = price.toFixed(2) + ' zł';
+        }
+    }
+
     async function addToCart(productId) {
-        const variantSelect = document.getElementById('variant');
-        const variantId = variantSelect ? variantSelect.value : '';
+        const variantInput = document.getElementById('variant');
+        const variantId = variantInput ? variantInput.value : '';
         const quantity = parseInt(document.getElementById('quantity').value || 1, 10);
+        
+        // Check if variant is required but not selected
+        @if($product->variants && $product->variants->count())
+        if (!variantId) {
+            alert('Wybierz rozmiar przed dodaniem do koszyka!');
+            return;
+        }
+        @endif
 
         const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 

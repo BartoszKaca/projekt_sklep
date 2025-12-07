@@ -342,6 +342,34 @@
         display: block;
     }
 
+    .hidden {
+        display: none !important;
+    }
+
+    .variant-row {
+        background: var(--light-gray);
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+
+    .variant-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr auto;
+        gap: 1rem;
+        align-items: end;
+    }
+
+    .variant-grid .form-group {
+        margin-bottom: 0;
+    }
+
+    @media (max-width: 768px) {
+        .variant-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
     @media (max-width: 1024px) {
         .form-container {
             grid-template-columns: 1fr;
@@ -555,6 +583,60 @@
                     </div>
                 </div>
 
+                <!-- Variants (Sizes) - for Merch -->
+                <div id="variants-section" class="form-section {{ old('type', $product->type ?? 'album') == 'merch' ? '' : 'hidden' }}">
+                    <h3 class="section-title"><i class="fas fa-tshirt"></i> Rozmiary i warianty</h3>
+                    
+                    <div id="variants-container">
+                        @if(isset($product) && $product->variants->count() > 0)
+                            @foreach($product->variants as $index => $variant)
+                            <div class="variant-row" data-index="{{ $index }}">
+                                <input type="hidden" name="variants[{{ $index }}][id]" value="{{ $variant->id }}">
+                                <div class="variant-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Rozmiar</label>
+                                        <select name="variants[{{ $index }}][size]" class="form-select">
+                                            <option value="">Wybierz</option>
+                                            @foreach(['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'] as $size)
+                                                <option value="{{ $size }}" {{ $variant->size == $size ? 'selected' : '' }}>{{ $size }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Kolor</label>
+                                        <input type="text" name="variants[{{ $index }}][color]" class="form-input" 
+                                               value="{{ $variant->color }}" placeholder="np. Czarny">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Stan mag.</label>
+                                        <input type="number" name="variants[{{ $index }}][stock_quantity]" class="form-input" 
+                                               value="{{ $variant->stock_quantity }}" min="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Dopłata (PLN)</label>
+                                        <input type="number" name="variants[{{ $index }}][price_modifier]" class="form-input" 
+                                               value="{{ $variant->price_modifier }}" step="0.01" placeholder="0.00">
+                                    </div>
+                                    <div class="form-group" style="display:flex; align-items:flex-end;">
+                                        <button type="button" class="btn btn-danger btn-sm remove-variant" onclick="removeVariant(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            @endforeach
+                        @endif
+                    </div>
+
+                    <button type="button" class="btn-add-variant" onclick="addVariant()">
+                        <i class="fas fa-plus"></i> Dodaj rozmiar/wariant
+                    </button>
+                    
+                    <div class="form-help" style="margin-top: 0.75rem;">
+                        <i class="fas fa-info-circle"></i> Dodaj różne rozmiary koszulek. Stan magazynowy będzie liczony osobno dla każdego rozmiaru.
+                    </div>
+                </div>
+
                 <!-- Images -->
                 <div class="form-section">
                     <h3 class="section-title">Zdjęcia produktu</h3>
@@ -658,12 +740,61 @@
 
 @push('scripts')
 <script>
-    // Type toggle
+    let variantIndex = {{ isset($product) ? $product->variants->count() : 0 }};
+
+    // Type toggle - show/hide album fields and variants section
     document.querySelectorAll('input[name="type"]').forEach(radio => {
         radio.addEventListener('change', function() {
             document.getElementById('album-fields').classList.toggle('active', this.value === 'album');
+            document.getElementById('variants-section').classList.toggle('hidden', this.value !== 'merch');
         });
     });
+
+    function addVariant() {
+        const container = document.getElementById('variants-container');
+        const html = `
+            <div class="variant-row" data-index="${variantIndex}">
+                <div class="variant-grid">
+                    <div class="form-group">
+                        <label class="form-label">Rozmiar</label>
+                        <select name="variants[${variantIndex}][size]" class="form-select">
+                            <option value="">Wybierz</option>
+                            <option value="XS">XS</option>
+                            <option value="S">S</option>
+                            <option value="M">M</option>
+                            <option value="L">L</option>
+                            <option value="XL">XL</option>
+                            <option value="XXL">XXL</option>
+                            <option value="3XL">3XL</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Kolor</label>
+                        <input type="text" name="variants[${variantIndex}][color]" class="form-input" placeholder="np. Czarny">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Stan mag.</label>
+                        <input type="number" name="variants[${variantIndex}][stock_quantity]" class="form-input" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Dopłata (PLN)</label>
+                        <input type="number" name="variants[${variantIndex}][price_modifier]" class="form-input" value="0" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:flex-end;">
+                        <button type="button" class="btn btn-danger btn-sm remove-variant" onclick="removeVariant(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+        variantIndex++;
+    }
+
+    function removeVariant(btn) {
+        btn.closest('.variant-row').remove();
+    }
 
     // Image preview
     document.getElementById('images').addEventListener('change', function(e) {
