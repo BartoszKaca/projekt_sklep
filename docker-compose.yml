@@ -15,10 +15,13 @@ services:
       - "5173:5173"
     depends_on:
       - db
+      - redis
     networks:
       - laravel
     environment:
       - CHOKIDAR_USEPOLLING=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
 
   db:
     image: mysql:8.0
@@ -48,6 +51,15 @@ services:
       PMA_PASSWORD: root
     depends_on:
       - db
+    networks:
+      - laravel
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
     networks:
       - laravel
 

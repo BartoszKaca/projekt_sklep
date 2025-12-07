@@ -38,6 +38,67 @@ class CheckoutController extends Controller
                 ->with('error', 'Twój koszyk jest pusty.');
         }
 
+        // Walidacja produktów i wariantów w koszyku
+        foreach ($cart['items'] as $key => $item) {
+            $product = Product::with('variants')->find($item['product_id']);
+            
+            if (!$product) {
+                // Usuń nieistniejący produkt z koszyka
+                unset($cart['items'][$key]);
+                continue;
+            }
+
+            // Sprawdź czy produkt ma warianty
+            $hasVariants = $product->variants()->count() > 0;
+            
+            if ($hasVariants) {
+                // Jeśli produkt ma warianty, wariant_id jest wymagany
+                if (empty($item['variant_id'])) {
+                    // Usuń produkt z koszyka i przekieruj na stronę produktu
+                    unset($cart['items'][$key]);
+                    session(['cart' => $cart]);
+                    return redirect()->route('products.show', $product->slug)
+                        ->with('error', 'Wybierz rozmiar przed dodaniem do koszyka.');
+                }
+                
+                // Sprawdź czy wariant istnieje i należy do produktu
+                $variant = ProductVariant::where('id', $item['variant_id'])
+                    ->where('product_id', $product->id)
+                    ->first();
+                
+                if (!$variant) {
+                    // Wariant nie istnieje - usuń z koszyka i przekieruj
+                    unset($cart['items'][$key]);
+                    session(['cart' => $cart]);
+                    return redirect()->route('products.show', $product->slug)
+                        ->with('error', 'Wybrany wariant nie jest już dostępny. Wybierz inny rozmiar.');
+                }
+                
+                // Sprawdź stan magazynowy wariantu
+                if ($variant->stock_quantity !== null && $variant->stock_quantity < $item['quantity']) {
+                    return redirect()->route('products.show', $product->slug)
+                        ->with('error', "Dostępne tylko {$variant->stock_quantity} sztuk wybranego rozmiaru.");
+                }
+            } else {
+                // Produkt bez wariantów - sprawdź stan magazynowy
+                if ($product->stock_quantity !== null && $product->stock_quantity < $item['quantity']) {
+                    return redirect()->route('products.show', $product->slug)
+                        ->with('error', "Dostępne tylko {$product->stock_quantity} sztuk produktu.");
+                }
+            }
+        }
+
+        // Zapisz zaktualizowany koszyk (jeśli coś usunęliśmy)
+        if (count($cart['items']) != count(session('cart')['items'] ?? [])) {
+            session(['cart' => $cart]);
+        }
+
+        // Jeśli koszyk jest pusty po walidacji
+        if (empty($cart['items'])) {
+            return redirect()->route('cart.index')
+                ->with('error', 'Koszyk jest pusty po weryfikacji produktów.');
+        }
+
         $user = auth()->user();
         $addresses = $user ? $user->addresses()->orderBy('is_default', 'desc')->get() : collect();
         $defaultAddress = $user ? $user->defaultAddress : null;

@@ -91,7 +91,22 @@
             body: JSON.stringify({ item_key: itemKey, quantity: parseInt(qty, 10) })
         });
         const data = await res.json();
-        if (!res.ok || !data.success) { alert(data.message || 'Błąd'); return; }
+        if (!res.ok || !data.success) {
+            // Jeśli produkt wymaga wariantu lub został usunięty, przekieruj
+            if (data.redirect_url || data.requires_variant || data.removed) {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else if (data.product_slug) {
+                    window.location.href = `/products/${data.product_slug}`;
+                } else {
+                    // Produkt usunięty, odśwież stronę
+                    location.reload();
+                }
+                return;
+            }
+            alert(data.message || 'Błąd');
+            return;
+        }
         location.reload();
     }
 

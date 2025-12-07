@@ -135,17 +135,53 @@ class CartController extends Controller
         } else {
             // Sprawdź stan magazynowy przed aktualizacją
             $item = $cart['items'][$key];
-            $product = Product::find($item['product_id']);
+            $product = Product::with('variants')->find($item['product_id']);
             
             if (!$product) {
-                return response()->json(['success' => false, 'message' => 'Produkt nie znaleziony'], 404);
+                // Usuń produkt z koszyka
+                unset($cart['items'][$key]);
+                $this->saveCart($cart);
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Produkt nie jest już dostępny.',
+                    'removed' => true
+                ], 404);
             }
 
+            // Sprawdź czy produkt ma warianty i czy wariant jest wymagany
+            $hasVariants = $product->variants()->count() > 0;
+            
+            if ($hasVariants && empty($item['variant_id'])) {
+                // Produkt ma warianty, ale wariant nie został wybrany - usuń z koszyka
+                unset($cart['items'][$key]);
+                $this->saveCart($cart);
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Wybierz rozmiar przed dodaniem do koszyka.',
+                    'requires_variant' => true,
+                    'product_slug' => $product->slug,
+                    'redirect_url' => route('products.show', $product->slug),
+                    'removed' => true
+                ], 400);
+            }
+            
             $stock = null;
             if ($item['variant_id']) {
-                $variant = ProductVariant::find($item['variant_id']);
+                $variant = ProductVariant::where('id', $item['variant_id'])
+                    ->where('product_id', $product->id)
+                    ->first();
+                
                 if (!$variant) {
-                    return response()->json(['success' => false, 'message' => 'Wariant nie znaleziony'], 404);
+                    // Wariant nie istnieje - usuń z koszyka
+                    unset($cart['items'][$key]);
+                    $this->saveCart($cart);
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'Wybrany wariant nie jest już dostępny. Wybierz inny rozmiar.',
+                        'product_slug' => $product->slug,
+                        'redirect_url' => route('products.show', $product->slug),
+                        'removed' => true
+                    ], 404);
                 }
                 $stock = $variant->stock_quantity;
             } else {

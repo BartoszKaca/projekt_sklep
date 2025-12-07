@@ -37,6 +37,11 @@ check_requirements() {
         exit 1
     fi
     
+    if [ ! -f docker-compose.prod.yml ]; then
+        log_error "Brak pliku docker-compose.prod.yml!"
+        exit 1
+    fi
+    
     log_success "Wymagania spełnione"
 }
 
@@ -71,7 +76,11 @@ pull_latest() {
 build_containers() {
     log_info "Budowanie kontenerów Docker..."
     
-    docker compose -f docker-compose.prod.yml build --no-cache
+    if ! docker compose -f docker-compose.prod.yml build --no-cache 2>&1; then
+        log_error "Błąd podczas budowania kontenerów!"
+        log_info "Sprawdź logi powyżej aby zobaczyć szczegóły błędu"
+        exit 1
+    fi
     
     log_success "Kontenery zbudowane"
 }
@@ -79,7 +88,22 @@ build_containers() {
 start_containers() {
     log_info "Uruchamianie kontenerów..."
     
-    docker compose -f docker-compose.prod.yml up -d
+    if ! docker compose -f docker-compose.prod.yml up -d 2>&1; then
+        log_error "Błąd podczas uruchamiania kontenerów!"
+        log_info "Sprawdź logi powyżej aby zobaczyć szczegóły błędu"
+        log_info "Spróbuj: docker compose -f docker-compose.prod.yml logs"
+        exit 1
+    fi
+    
+    # Poczekaj chwilę i sprawdź status
+    sleep 2
+    local failed_containers=$(docker compose -f docker-compose.prod.yml ps --format json 2>/dev/null | grep -c '"State":"exited"' || echo "0")
+    
+    if [ "$failed_containers" -gt "0" ]; then
+        log_warn "Niektóre kontenery zakończyły się błędem. Sprawdź status:"
+        docker compose -f docker-compose.prod.yml ps
+        log_info "Sprawdź logi: ./deploy.sh logs"
+    fi
     
     log_success "Kontenery uruchomione"
 }
@@ -138,7 +162,12 @@ setup_storage() {
 restart_queue() {
     log_info "Restart queue workera..."
     
-    docker compose -f docker-compose.prod.yml restart queue
+    # Sprawdź czy kontener queue istnieje
+    if docker compose -f docker-compose.prod.yml ps queue &>/dev/null; then
+        docker compose -f docker-compose.prod.yml restart queue || log_warn "Nie udało się zrestartować queue (może nie być uruchomiony)"
+    else
+        log_warn "Kontener queue nie istnieje - pomijam restart"
+    fi
     
     log_success "Queue worker zrestartowany"
 }
@@ -150,6 +179,18 @@ show_status() {
     echo "=============================================="
     echo ""
     docker compose -f docker-compose.prod.yml ps
+    echo ""
+    
+    # Sprawdź czy wszystkie kontenery działają
+    local containers=$(docker compose -f docker-compose.prod.yml ps --format json | jq -r '.[] | select(.State != "running") | .Name' 2>/dev/null || echo "")
+    if [ -n "$containers" ]; then
+        log_warn "Niektore kontenery nie działają:"
+        docker compose -f docker-compose.prod.yml ps --format "table {{.Name}}\t{{.Status}}"
+        log_info "Sprawdź logi: ./deploy.sh logs"
+    else
+        log_success "Wszystkie kontenery działają poprawnie"
+    fi
+    
     echo ""
     log_info "Logi: docker compose -f docker-compose.prod.yml logs -f"
     log_info "Stop: docker compose -f docker-compose.prod.yml down"
@@ -165,6 +206,10 @@ case "${1:-deploy}" in
         check_requirements
         setup_env
         pull_latest
+        
+        log_info "Zatrzymywanie istniejących kontenerów..."
+        docker compose -f docker-compose.prod.yml down --remove-orphans || true
+        
         build_containers
         start_containers
         wait_for_db
@@ -188,26 +233,61 @@ case "${1:-deploy}" in
     
     rebuild)
         log_info "🔨 Przebudowa kontenerów..."
-        docker compose -f docker-compose.prod.yml down
+        log_info "Zatrzymywanie i usuwanie istniejących kontenerów..."
+        docker compose -f docker-compose.prod.yml down --remove-orphans || true
+        
+        # Usuń stare kontenery, które mogą mieć konflikt nazw
+        log_info "Usuwanie starych kontenerów z konfliktami nazw..."
+        docker ps -a --filter "name=sklep_" --format "{{.Names}}" | xargs -r docker rm -f || true
+        
+        sleep 1
+        
         build_containers
+        
         start_containers
+        
+        log_info "Oczekiwanie na inicjalizację kontenerów..."
+        sleep 3
+        
         wait_for_db
+        
         run_migrations
         optimize_laravel
         setup_storage
+        restart_queue
+        
         show_status
         ;;
     
     start)
         log_info "▶️ Uruchamianie..."
+        
+        # Sprawdź czy są stare kontenery z konfliktami
+        local conflict_containers=$(docker ps -a --filter "name=sklep_" --format "{{.Names}}" 2>/dev/null | grep -v "$(docker compose -f docker-compose.prod.yml ps --format '{{.Name}}' 2>/dev/null | tr '\n' '|')" || echo "")
+        
+        if [ -n "$conflict_containers" ]; then
+            log_warn "Znaleziono stare kontenery z konfliktami, usuwam..."
+            echo "$conflict_containers" | xargs -r docker rm -f || true
+        fi
+        
         docker compose -f docker-compose.prod.yml up -d
         show_status
         ;;
     
     stop)
         log_info "⏹️ Zatrzymywanie..."
-        docker compose -f docker-compose.prod.yml down
+        docker compose -f docker-compose.prod.yml down --remove-orphans
         log_success "Zatrzymano"
+        ;;
+    
+    cleanup)
+        log_info "🧹 Czyszczenie starych kontenerów i obrazów..."
+        docker compose -f docker-compose.prod.yml down --remove-orphans --volumes --rmi all || true
+        
+        # Usuń wszystkie kontenery z nazwą sklep_
+        docker ps -a --filter "name=sklep_" --format "{{.Names}}" | xargs -r docker rm -f || true
+        
+        log_success "Czyszczenie zakończone"
         ;;
     
     logs)
@@ -240,7 +320,7 @@ case "${1:-deploy}" in
         ;;
     
     *)
-        echo "Użycie: $0 {deploy|update|rebuild|start|stop|logs|status|shell|artisan|mysql|backup}"
+        echo "Użycie: $0 {deploy|update|rebuild|start|stop|logs|status|shell|artisan|mysql|backup|cleanup}"
         echo ""
         echo "Komendy:"
         echo "  deploy   - Pełny deploy (build + migracje + optymalizacja)"
@@ -248,6 +328,7 @@ case "${1:-deploy}" in
         echo "  rebuild  - Przebudowa wszystkich kontenerów"
         echo "  start    - Uruchom kontenery"
         echo "  stop     - Zatrzymaj kontenery"
+        echo "  cleanup  - Usuń stare kontenery i obrazy (UWAGA: usuwa dane!)"
         echo "  logs     - Pokaż logi (opcjonalnie: logs nginx)"
         echo "  status   - Status kontenerów"
         echo "  shell    - Bash w kontenerze app"

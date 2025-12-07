@@ -7,6 +7,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use OpenPayU_Exception;
+use OpenPayU_Exception_Authorization;
+use OpenPayU_Exception_ServerError;
+use OpenPayU_Exception_ServerMaintenance;
 
 
 class PaymentController extends Controller
@@ -14,11 +18,26 @@ class PaymentController extends Controller
 
     private function configurePayU(): void
     {
-        \OpenPayU_Configuration::setEnvironment(config('payu.environment', 'sandbox'));
-        \OpenPayU_Configuration::setMerchantPosId(config('payu.pos_id'));
-        \OpenPayU_Configuration::setSignatureKey(config('payu.signature_key'));
-        \OpenPayU_Configuration::setOauthClientId(config('payu.client_id'));
-        \OpenPayU_Configuration::setOauthClientSecret(config('payu.client_secret'));
+        $environment = config('payu.environment', 'sandbox');
+        $posId = config('payu.pos_id');
+        $signatureKey = config('payu.signature_key');
+        $clientId = config('payu.client_id');
+        $clientSecret = config('payu.client_secret');
+
+        // Loguj konfigurację (bez pełnych kluczy)
+        Log::debug('PayU configuration', [
+            'environment' => $environment,
+            'pos_id' => $posId,
+            'has_signature_key' => !empty($signatureKey),
+            'has_client_id' => !empty($clientId),
+            'has_client_secret' => !empty($clientSecret)
+        ]);
+
+        \OpenPayU_Configuration::setEnvironment($environment);
+        \OpenPayU_Configuration::setMerchantPosId($posId);
+        \OpenPayU_Configuration::setSignatureKey($signatureKey);
+        \OpenPayU_Configuration::setOauthClientId($clientId);
+        \OpenPayU_Configuration::setOauthClientSecret($clientSecret);
     }
 
 
@@ -44,10 +63,39 @@ class PaymentController extends Controller
                 ->with('info', 'To zamówienie zostało już opłacone.');
         }
 
+        // Opcjonalny tryb symulacji (tylko jeśli włączony)
+        if (config('payu.simulate', false)) {
+            Log::info('PayU simulation mode - automatically approving payment', [
+                'order' => $order->order_number
+            ]);
+            
+            // Symuluj opłacone zamówienie
+            $order->update([
+                'payment_status' => 'paid',
+                'paid_at' => now(),
+                'status' => 'processing'
+            ]);
+            
+            return redirect()->route('checkout.success', ['order' => $order->id])
+                ->with('success', 'Płatność została symulowana.');
+        }
 
-        if (!config('payu.pos_id') || !config('payu.signature_key')) {
+        // Sprawdź konfigurację PayU
+        $posId = config('payu.pos_id');
+        $signatureKey = config('payu.signature_key');
+        $clientId = config('payu.client_id');
+        $clientSecret = config('payu.client_secret');
+        $environment = config('payu.environment', 'sandbox');
 
-            Log::warning('PayU not configured, falling back to bank transfer');
+        if (!$posId || !$signatureKey || !$clientId || !$clientSecret) {
+            Log::warning('PayU not fully configured', [
+                'has_pos_id' => !empty($posId),
+                'has_signature_key' => !empty($signatureKey),
+                'has_client_id' => !empty($clientId),
+                'has_client_secret' => !empty($clientSecret),
+                'environment' => $environment
+            ]);
+            
             $order->update(['payment_method' => 'bank_transfer']);
 
             return redirect()->route('checkout.success', ['order' => $order->id])
@@ -55,6 +103,11 @@ class PaymentController extends Controller
         }
 
         try {
+            Log::info('PayU configuration', [
+                'environment' => $environment,
+                'pos_id' => $posId,
+                'has_client_credentials' => !empty($clientId) && !empty($clientSecret)
+            ]);
 
             $this->configurePayU();
 
@@ -102,8 +155,21 @@ class PaymentController extends Controller
                 ];
             }
 
+            Log::info('PayU order creation attempt', [
+                'order_number' => $order->order_number,
+                'total' => $order->total,
+                'environment' => config('payu.environment'),
+                'pos_id' => config('payu.pos_id'),
+                'has_products' => count($orderData['products']) > 0
+            ]);
+
             $response = \OpenPayU_Order::create($orderData);
             $status = $response->getStatus(); 
+
+            Log::info('PayU order creation response', [
+                'status' => $status,
+                'order_number' => $order->order_number
+            ]);
 
             if ($status === 'SUCCESS') {
                 $redirectUri = $response->getResponse()->redirectUri;
@@ -113,18 +179,97 @@ class PaymentController extends Controller
                     'payu_order_id' => $response->getResponse()->orderId ?? null
                 ]);
                 
-                Log::info("PayU payment initialized for order {$order->order_number}");
+                Log::info("PayU payment initialized successfully", [
+                    'order' => $order->order_number,
+                    'payu_order_id' => $response->getResponse()->orderId ?? null,
+                    'redirect_uri' => $redirectUri
+                ]);
                 
                 return redirect()->away($redirectUri);
             }
 
-            throw new \Exception('PayU order creation failed: ' . $status);
+            // Jeśli status nie jest SUCCESS, loguj szczegóły odpowiedzi
+            $errorDetails = 'Status: ' . $status;
+            if (method_exists($response, 'getResponse') && $response->getResponse()) {
+                $responseObj = $response->getResponse();
+                if (isset($responseObj->status)) {
+                    $errorDetails .= ', PayU Status: ' . ($responseObj->status->statusCode ?? 'N/A');
+                    $errorDetails .= ', Message: ' . ($responseObj->status->statusDesc ?? 'N/A');
+                }
+            }
+            
+            Log::error('PayU order creation failed', [
+                'order' => $order->order_number,
+                'status' => $status,
+                'details' => $errorDetails
+            ]);
 
+            throw new \Exception('PayU order creation failed: ' . $errorDetails);
+
+        } catch (\OpenPayU_Exception_Authorization $e) {
+            Log::error('PayU authorization error', [
+                'message' => $e->getMessage(),
+                'environment' => config('payu.environment'),
+                'pos_id' => config('payu.pos_id'),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Błąd autoryzacji - sprawdź czy dane są poprawne dla sandbox
+            $errorMessage = 'Błąd autoryzacji PayU sandbox. ';
+            if (config('payu.environment') === 'sandbox') {
+                $errorMessage .= 'Sprawdź czy dane dostępowe (POS ID, klucze) są poprawne dla środowiska sandbox. ';
+            }
+            $errorMessage .= 'Sprawdź logi serwera dla szczegółów.';
+            
+            return redirect()->route('checkout.success', ['order' => $order->id])
+                ->with('error', $errorMessage);
+                
+        } catch (\OpenPayU_Exception_ServerMaintenance $e) {
+            Log::error('PayU server maintenance', [
+                'message' => $e->getMessage(),
+                'environment' => config('payu.environment')
+            ]);
+            
+            return redirect()->route('checkout.success', ['order' => $order->id])
+                ->with('error', 'System płatności PayU sandbox jest aktualnie w konserwacji. Spróbuj ponownie za chwilę lub wybierz inną metodę płatności.');
+                
+        } catch (\OpenPayU_Exception_ServerError $e) {
+            Log::error('PayU server error', [
+                'message' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'environment' => config('payu.environment'),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            $errorMessage = 'Wystąpił błąd po stronie PayU sandbox. ';
+            if (strpos(strtolower($e->getMessage()), 'unavailable') !== false) {
+                $errorMessage .= 'System jest chwilowo niedostępny. ';
+            }
+            $errorMessage .= 'Sprawdź logi serwera lub spróbuj ponownie za chwilę.';
+            
+            return redirect()->route('checkout.success', ['order' => $order->id])
+                ->with('error', $errorMessage);
+                
         } catch (\Exception $e) {
-            Log::error('PayU payment error: ' . $e->getMessage());
+            Log::error('PayU payment error', [
+                'message' => $e->getMessage(),
+                'class' => get_class($e),
+                'environment' => config('payu.environment'),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // Sprawdź czy to komunikat o niedostępności systemu
+            $isUnavailable = strpos(strtolower($e->getMessage()), 'unavailable') !== false 
+                          || strpos(strtolower($e->getMessage()), 'niedostępny') !== false
+                          || strpos(strtolower($e->getMessage()), 'system is unavailable') !== false;
+
+            if ($isUnavailable) {
+                return redirect()->route('checkout.success', ['order' => $order->id])
+                    ->with('error', 'System płatności PayU sandbox jest chwilowo niedostępny. Spróbuj ponownie za chwilę lub wybierz inną metodę płatności.');
+            }
 
             return redirect()->route('checkout.success', ['order' => $order->id])
-                ->with('error', 'Wystąpił błąd podczas inicjalizacji płatności. Prosimy o przelew bankowy.');
+                ->with('error', 'Wystąpił błąd podczas inicjalizacji płatności PayU. Sprawdź logi serwera dla szczegółów.');
         }
     }
 
