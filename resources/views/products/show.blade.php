@@ -262,12 +262,21 @@
         const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
         try {
-            const res = await fetch("{{ route('cart.add') }}", {
+            const cartAddUrl = @json(route('cart.add')) || '/cart/add';
+            
+            if (!cartAddUrl) {
+                console.error('Cart add route not found');
+                alert('Błąd konfiguracji: brak ścieżki do koszyka');
+                return;
+            }
+            
+            const res = await fetch(cartAddUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': token,
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
                     product_id: productId,
@@ -276,8 +285,32 @@
                 })
             });
 
-            const data = await res.json();
+            // Sprawdź czy to błąd 404
+            if (res.status === 404) {
+                console.error('Route not found:', cartAddUrl);
+                alert('Błąd: Nie znaleziono ścieżki do koszyka. Proszę odświeżyć stronę.');
+                return;
+            }
+
+            let data;
+            try {
+                data = await res.json();
+            } catch (jsonError) {
+                console.error('JSON parse error:', jsonError);
+                const text = await res.text();
+                console.error('Response text:', text);
+                alert('Błąd: Nieprawidłowa odpowiedź z serwera. Status: ' + res.status);
+                return;
+            }
+
             if (!res.ok || !data.success) {
+                // Jeśli produkt wymaga wariantu lub przekierowania
+                if (data.requires_variant || data.redirect_url || data.removed) {
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    }
+                    return;
+                }
                 alert(data.message || 'Błąd dodawania do koszyka');
                 return;
             }

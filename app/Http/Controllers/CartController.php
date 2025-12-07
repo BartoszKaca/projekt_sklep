@@ -35,84 +35,113 @@ class CartController extends Controller
 
     public function add(Request $request)
     {
-        $request->validate([
-            'product_id' => 'required|integer',
-            'variant_id' => 'nullable|integer',
-            'quantity' => 'nullable|integer|min:1',
-        ]);
+        try {
+            $request->validate([
+                'product_id' => 'required|integer',
+                'variant_id' => 'nullable|integer',
+                'quantity' => 'nullable|integer|min:1',
+            ]);
 
-        $product = Product::find($request->product_id);
-        if (!$product) {
-            return response()->json(['success' => false, 'message' => 'Produkt nie znaleziony.'], 404);
-        }
-
-        $quantity = max(1, (int) $request->quantity);
-
-        // Sprawdź czy produkt ma warianty
-        $hasVariants = $product->variants()->count() > 0;
-
-        $variant = null;
-        if ($request->variant_id) {
-            $variant = ProductVariant::where('id', $request->variant_id)
-                ->where('product_id', $product->id)
-                ->first();
-            if (!$variant) {
-                return response()->json(['success' => false, 'message' => 'Wariant nie znaleziony.'], 404);
-            }
-            $price = $variant->getFinalPrice();
-            $stock = $variant->stock_quantity;
-            $itemKey = 'v'.$variant->id;
-        } else {
-            // Jeśli produkt ma warianty, wymagaj wyboru
-            if ($hasVariants) {
+            $product = Product::with('variants', 'primaryImage')->find($request->product_id);
+            if (!$product) {
                 return response()->json([
                     'success' => false, 
-                    'message' => 'Wybierz rozmiar przed dodaniem do koszyka.',
-                    'requires_variant' => true
+                    'message' => 'Produkt nie znaleziony.'
+                ], 404);
+            }
+
+            $quantity = max(1, (int) $request->quantity);
+
+            // Sprawdź czy produkt ma warianty
+            $hasVariants = $product->variants()->count() > 0;
+
+            $variant = null;
+            if ($request->variant_id) {
+                $variant = ProductVariant::where('id', $request->variant_id)
+                    ->where('product_id', $product->id)
+                    ->first();
+                if (!$variant) {
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'Wariant nie znaleziony.',
+                        'product_slug' => $product->slug,
+                        'redirect_url' => route('products.show', $product->slug)
+                    ], 404);
+                }
+                $price = $variant->getFinalPrice();
+                $stock = $variant->stock_quantity;
+                $itemKey = 'v'.$variant->id;
+            } else {
+                // Jeśli produkt ma warianty, wymagaj wyboru
+                if ($hasVariants) {
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'Wybierz rozmiar przed dodaniem do koszyka.',
+                        'requires_variant' => true,
+                        'product_slug' => $product->slug,
+                        'redirect_url' => route('products.show', $product->slug)
+                    ], 400);
+                }
+                
+                // Produkt bez wariantów
+                $price = $product->getFinalPrice() ?? $product->price;
+                $stock = $product->stock_quantity;
+                $itemKey = 'p'.$product->id;
+            }
+
+            if ($stock !== null && $stock < $quantity) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Brak wystarczającego stanu magazynowego.'
                 ], 400);
             }
+
+            $cart = $this->getCart();
+            if (!isset($cart['items'][$itemKey])) {
+                $cart['items'][$itemKey] = [
+                    'product_id' => $product->id,
+                    'variant_id' => $variant ? $variant->id : null,
+                    'name' => $product->name,
+                    'variant_name' => $variant ? $variant->name : null,
+                    'size' => $variant ? $variant->size : null,
+                    'color' => $variant ? $variant->color : null,
+                    'price' => (float) ($variant ? $variant->getFinalPrice() : ($product->getFinalPrice() ?? $product->price)),
+                    'quantity' => $quantity,
+                    'slug' => $product->slug,
+                    'image' => optional($product->primaryImage)->path ?? null,
+                ];
+            } else {
+                $cart['items'][$itemKey]['quantity'] += $quantity;
+            }
+
+            $this->saveCart($cart);
+
+            $count = 0;
+            foreach ($cart['items'] as $it) { $count += $it['quantity']; }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Dodano do koszyka',
+                'cart_count' => $count,
+                'cart_total' => $cart['total']
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Błąd walidacji: ' . implode(', ', $e->errors()['product_id'] ?? []),
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Cart add error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
             
-            // Produkt bez wariantów
-            $price = $product->getFinalPrice() ?? $product->price;
-            $stock = $product->stock_quantity;
-            $itemKey = 'p'.$product->id;
+            return response()->json([
+                'success' => false,
+                'message' => 'Wystąpił błąd podczas dodawania do koszyka. Spróbuj ponownie.'
+            ], 500);
         }
-
-
-        if ($stock !== null && $stock < $quantity) {
-            return response()->json(['success' => false, 'message' => 'Brak wystarczającego stanu magazynowego.'], 400);
-        }
-
-        $cart = $this->getCart();
-        if (!isset($cart['items'][$itemKey])) {
-            $cart['items'][$itemKey] = [
-                'product_id' => $product->id,
-                'variant_id' => $variant ? $variant->id : null,
-                'name' => $product->name,
-                'variant_name' => $variant ? $variant->name : null,
-                'size' => $variant ? $variant->size : null,
-                'color' => $variant ? $variant->color : null,
-                'price' => (float) ($variant ? $variant->getFinalPrice() : ($product->getFinalPrice() ?? $product->price)),
-                'quantity' => $quantity,
-                'slug' => $product->slug,
-                'image' => optional($product->primaryImage)->path ?? null,
-            ];
-        } else {
-            $cart['items'][$itemKey]['quantity'] += $quantity;
-        }
-
-        $this->saveCart($cart);
-
-
-        $count = 0;
-        foreach ($cart['items'] as $it) { $count += $it['quantity']; }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Dodano do koszyka',
-            'cart_count' => $count,
-            'cart_total' => $cart['total']
-        ]);
     }
 
     public function update(Request $request)

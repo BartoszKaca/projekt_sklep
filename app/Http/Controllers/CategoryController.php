@@ -13,7 +13,7 @@ class CategoryController extends Controller
 
         $products = $category->products()
             ->where('is_active', 1)
-            ->with(['primaryImage', 'category'])
+            ->with(['primaryImage', 'category', 'variants'])
             ->paginate(20);
 
         return view('category.show', compact('category', 'products'));

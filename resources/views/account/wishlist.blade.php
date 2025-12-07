@@ -232,26 +232,73 @@
 
 @push('scripts')
 <script>
-function addToCart(productId) {
-    fetch('{{ route("cart.add") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: JSON.stringify({ product_id: productId, quantity: 1 })
-    })
-    .then(response => response.json())
-    .then(data => {
+async function addToCart(productId) {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (!token) {
+        alert('Błąd: Brak tokenu CSRF');
+        return;
+    }
+
+    try {
+        const cartAddUrl = @json(route('cart.add')) || '/cart/add';
+        
+        if (!cartAddUrl) {
+            console.error('Cart add route not found');
+            alert('Błąd konfiguracji: brak ścieżki do koszyka');
+            return;
+        }
+        
+        const res = await fetch(cartAddUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ 
+                product_id: productId, 
+                variant_id: null,
+                quantity: 1 
+            })
+        });
+
+        if (res.status === 404) {
+            console.error('Route not found: cart.add');
+            alert('Błąd: Nie znaleziono ścieżki do koszyka. Proszę odświeżyć stronę.');
+            return;
+        }
+
+        let data;
+        try {
+            data = await res.json();
+        } catch (jsonError) {
+            console.error('JSON parse error:', jsonError);
+            alert('Błąd: Nieprawidłowa odpowiedź z serwera.');
+            return;
+        }
+
         if (data.success) {
             alert('Produkt dodany do koszyka!');
             if (document.getElementById('cart-count')) {
                 document.getElementById('cart-count').textContent = data.cart_count;
             }
         } else {
+            // Jeśli produkt wymaga wariantu, przekieruj
+            if (data.requires_variant || data.redirect_url) {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else if (data.product_slug) {
+                    window.location.href = `/produkt/${data.product_slug}`;
+                }
+                return;
+            }
             alert(data.message || 'Wystąpił błąd');
         }
-    });
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Wystąpił błąd podczas dodawania do koszyka');
+    }
 }
 </script>
 @endpush

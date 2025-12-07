@@ -553,7 +553,7 @@
 
                             {{-- Akcje widoczne tylko w widoku siatki (grid) --}}
                             <div class="product-actions grid-only">
-                                <button class="product-action-btn" onclick="event.preventDefault(); addToCart('{{ $product->id }}', {{ $product->variants && $product->variants->count() > 0 ? 'true' : 'false' }})">
+                                <button class="product-action-btn" onclick="event.preventDefault(); event.stopPropagation(); addToCart('{{ $product->id }}', {{ ($product->variants && $product->variants->count() > 0) ? 'true' : 'false' }})">
                                     <i class="fas fa-shopping-bag"></i> Dodaj
                                 </button>
                                 <button class="product-action-btn icon-only" onclick="event.preventDefault(); toggleWishlist('{{ $product->id }}')">
@@ -563,9 +563,13 @@
                         </div>
                     </a>
 
-                    <div class="product-info">
-                        <div class="product-category">{{ $product->category->name }}</div>
-                        <h3 class="product-name">{{ $product->name }}</h3>
+                        <div class="product-info">
+                        <div class="product-category">{{ $product->category->name ?? 'Brak kategorii' }}</div>
+                        <h3 class="product-name">
+                            <a href="{{ route('products.show', $product->slug) }}" style="color: inherit; text-decoration: none;">
+                                {{ $product->name }}
+                            </a>
+                        </h3>
                         @if($product->artist)
                         <div class="product-artist">{{ $product->artist }}</div>
                         @endif
@@ -586,7 +590,7 @@
                     
                     {{-- Akcje widoczne tylko w widoku listy --}}
                     <div class="product-actions list-only">
-                        <button class="product-action-btn" onclick="addToCart('{{ $product->id }}', {{ $product->variants && $product->variants->count() > 0 ? 'true' : 'false' }})">
+                        <button class="product-action-btn" onclick="event.preventDefault(); addToCart('{{ $product->id }}', {{ ($product->variants && $product->variants->count() > 0) ? 'true' : 'false' }})">
                             <i class="fas fa-shopping-bag"></i> Do koszyka
                         </button>
                         <button class="product-action-btn icon-only" onclick="toggleWishlist('{{ $product->id }}')">
@@ -681,9 +685,17 @@
         if (hasVariants) {
             const productSlug = document.querySelector(`[data-product-id="${productId}"]`)?.dataset?.slug;
             if (productSlug) {
-                window.location.href = `/products/${productSlug}`;
+                window.location.href = `/produkt/${productSlug}`;
             } else {
-                window.location.href = `/products/${productId}`;
+                // Fallback - znajdź slug z linku do produktu
+                const productCard = document.querySelector(`[data-product-id="${productId}"]`);
+                const productLink = productCard?.querySelector('a.product-image-link');
+                if (productLink) {
+                    window.location.href = productLink.href;
+                } else {
+                    // Ostatni fallback - użyj productId jako slug (może zadziałać)
+                    window.location.href = `/produkt/${productId}`;
+                }
             }
             return;
         }
@@ -695,12 +707,22 @@
         }
 
         try {
-            const res = await fetch("{{ route('cart.add') }}", {
+            // Użyj route helper lub fallback URL
+            const cartAddUrl = @json(route('cart.add')) || '/cart/add';
+            
+            if (!cartAddUrl) {
+                console.error('Cart add route not found');
+                alert('Błąd konfiguracji: brak ścieżki do koszyka');
+                return;
+            }
+            
+            const res = await fetch(cartAddUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': token,
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
                     product_id: productId,
@@ -709,25 +731,53 @@
                 })
             });
 
-            const data = await res.json();
+            // Sprawdź czy to błąd 404
+            if (res.status === 404) {
+                console.error('Route not found:', cartAddUrl);
+                alert('Błąd: Nie znaleziono ścieżki do koszyka. Proszę odświeżyć stronę.');
+                return;
+            }
+
+            // Sprawdź czy odpowiedź jest JSON
+            let data;
+            try {
+                data = await res.json();
+            } catch (jsonError) {
+                console.error('JSON parse error:', jsonError);
+                const text = await res.text();
+                console.error('Response text:', text);
+                alert('Błąd: Nieprawidłowa odpowiedź z serwera. Status: ' + res.status);
+                return;
+            }
             
             if (!res.ok || !data.success) {
                 // Jeśli produkt wymaga wyboru wariantu, przekieruj na stronę produktu
                 if (data.requires_variant || (data.message && (data.message.includes('wariant') || data.message.includes('rozmiar') || data.message.includes('Wybierz')))) {
                     const productSlug = document.querySelector(`[data-product-id="${productId}"]`)?.dataset?.slug;
                     if (productSlug) {
-                        window.location.href = `/products/${productSlug}`;
+                        window.location.href = `/produkt/${productSlug}`;
                     } else {
                         // Fallback - spróbuj znaleźć slug z linku
                         const productLink = document.querySelector(`[data-product-id="${productId}"]`)?.closest('.product-card')?.querySelector('a.product-image-link');
                         if (productLink) {
                             window.location.href = productLink.href;
                         } else {
-                            window.location.href = `/products/${productId}`;
+                            window.location.href = `/produkty`;
                         }
                     }
                     return;
                 }
+                
+                // Jeśli produkt został usunięty lub przekierowanie jest wymagane
+                if (data.redirect_url || data.removed) {
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else if (data.product_slug) {
+                        window.location.href = `/produkt/${data.product_slug}`;
+                    }
+                    return;
+                }
+                
                 alert(data.message || 'Błąd dodawania do koszyka');
                 return;
             }

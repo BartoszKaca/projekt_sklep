@@ -80,51 +80,111 @@
 @push('scripts')
 <script>
     async function updateCart(itemKey, qty) {
-        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const res = await fetch("{{ route('cart.update') }}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': token,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ item_key: itemKey, quantity: parseInt(qty, 10) })
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-            // Jeśli produkt wymaga wariantu lub został usunięty, przekieruj
-            if (data.redirect_url || data.requires_variant || data.removed) {
-                if (data.redirect_url) {
-                    window.location.href = data.redirect_url;
-                } else if (data.product_slug) {
-                    window.location.href = `/products/${data.product_slug}`;
-                } else {
-                    // Produkt usunięty, odśwież stronę
-                    location.reload();
-                }
-                return;
-            }
-            alert(data.message || 'Błąd');
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (!token) {
+            alert('Błąd: Brak tokenu CSRF');
             return;
         }
-        location.reload();
+
+        const cartUpdateUrl = @json(route('cart.update')) || '/cart/update';
+        
+        try {
+            const res = await fetch(cartUpdateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ item_key: itemKey, quantity: parseInt(qty, 10) })
+            });
+
+            if (res.status === 404) {
+                console.error('Route not found:', cartUpdateUrl);
+                alert('Błąd: Nie znaleziono ścieżki. Proszę odświeżyć stronę.');
+                return;
+            }
+
+            let data;
+            try {
+                data = await res.json();
+            } catch (jsonError) {
+                console.error('JSON parse error:', jsonError);
+                alert('Błąd: Nieprawidłowa odpowiedź z serwera.');
+                return;
+            }
+
+            if (!res.ok || !data.success) {
+                // Jeśli produkt wymaga wariantu lub został usunięty, przekieruj
+                if (data.redirect_url || data.requires_variant || data.removed) {
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else if (data.product_slug) {
+                        window.location.href = `/produkt/${data.product_slug}`;
+                    } else {
+                        // Produkt usunięty, odśwież stronę
+                        location.reload();
+                    }
+                    return;
+                }
+                alert(data.message || 'Błąd');
+                return;
+            }
+            location.reload();
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Wystąpił błąd podczas aktualizacji koszyka.');
+        }
     }
 
     async function removeItem(itemKey) {
         if (!confirm('Usunąć pozycję z koszyka?')) return;
-        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const res = await fetch("{{ route('cart.remove') }}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': token,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ item_key: itemKey })
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) { alert(data.message || 'Błąd'); return; }
-        location.reload();
+        
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (!token) {
+            alert('Błąd: Brak tokenu CSRF');
+            return;
+        }
+
+        const cartRemoveUrl = @json(route('cart.remove')) || '/cart/remove';
+
+        try {
+            const res = await fetch(cartRemoveUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ item_key: itemKey })
+            });
+
+            if (res.status === 404) {
+                console.error('Route not found:', cartRemoveUrl);
+                alert('Błąd: Nie znaleziono ścieżki. Proszę odświeżyć stronę.');
+                return;
+            }
+
+            let data;
+            try {
+                data = await res.json();
+            } catch (jsonError) {
+                console.error('JSON parse error:', jsonError);
+                alert('Błąd: Nieprawidłowa odpowiedź z serwera.');
+                return;
+            }
+
+            if (!res.ok || !data.success) {
+                alert(data.message || 'Błąd');
+                return;
+            }
+            location.reload();
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Wystąpił błąd podczas usuwania z koszyka.');
+        }
     }
 </script>
 @endpush

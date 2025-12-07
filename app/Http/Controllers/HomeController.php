@@ -25,14 +25,14 @@ class HomeController extends Controller
 
         $featuredProducts = Product::where('is_active', 1)
             ->where('is_featured', 1)
-            ->with(['primaryImage', 'category', 'reviews'])
+            ->with(['primaryImage', 'category', 'reviews', 'variants'])
             ->take(8)
             ->get();
 
         
 
         $latestProducts = Product::where('is_active', 1)
-            ->with(['primaryImage', 'category'])
+            ->with(['primaryImage', 'category', 'variants'])
             ->latest()
             ->take(8)
             ->get();

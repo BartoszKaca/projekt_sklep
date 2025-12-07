@@ -227,7 +227,9 @@
             const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
             try {
-                const res = await fetch('{{ route('account.wishlist.add') }}', {
+                const wishlistUrl = @json(route('account.wishlist.add')) || '/account/wishlist/add';
+                
+                const res = await fetch(wishlistUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -238,7 +240,21 @@
                     body: JSON.stringify({ product_id: productId })
                 });
 
-                const data = await res.json();
+                if (res.status === 404) {
+                    console.error('Route not found:', wishlistUrl);
+                    alert('Błąd: Nie znaleziono ścieżki. Proszę odświeżyć stronę.');
+                    return;
+                }
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch (jsonError) {
+                    console.error('JSON parse error:', jsonError);
+                    alert('Błąd: Nieprawidłowa odpowiedź z serwera.');
+                    return;
+                }
+
                 if (data.success) {
                     // Aktualizuj licznik wishlisty
                     const badge = document.querySelector('a[data-wishlist-btn] .badge');
