@@ -156,7 +156,7 @@
 
         <!-- Stock Movements List -->
         <div>
-            <h3 class="section-title" style="margin-bottom: 1.5rem;">Historia ruchów ({{ $movements->count() }})</h3>
+            <h3 class="section-title" style="margin-bottom: 1.5rem;">Historia ruchów ({{ $movements->total() }})</h3>
 
             @forelse($movements as $movement)
             <div class="stock-movement-item">

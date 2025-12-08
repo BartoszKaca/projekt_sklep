@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -266,21 +267,30 @@ class ProductController extends Controller
     public function stock(Product $product)
     {
         try {
-            $product->load(['variants', 'category']);
-            $movements = $product->stockMovements()
-                ->with(['user', 'variant'])
+            // Upewnij się, że produkt istnieje i załaduj wszystkie potrzebne relacje
+            $product = Product::with(['variants', 'category'])->findOrFail($product->id);
+            
+            // Pobierz ruchy magazynowe z bezpiecznym ładowaniem relacji
+            $movements = StockMovement::where('product_id', $product->id)
+                ->with(['user:id,name,email', 'variant:id,size,color,name'])
                 ->latest()
                 ->paginate(20);
 
             return view('admin.products.stock', compact('product', 'movements'));
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            Log::error('Product not found for stock page', ['product_id' => $product->id ?? null]);
+            return redirect()->route('admin.products.index')
+                ->with('error', 'Produkt nie został znaleziony.');
         } catch (\Exception $e) {
-            \Log::error('Stock page error: ' . $e->getMessage(), [
-                'product_id' => $product->id,
-                'trace' => $e->getTraceAsString()
+            Log::error('Stock page error: ' . $e->getMessage(), [
+                'product_id' => $product->id ?? null,
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ]);
             
             return redirect()->route('admin.products.index')
-                ->with('error', 'Wystąpił błąd podczas ładowania strony stanu magazynowego.');
+                ->with('error', 'Wystąpił błąd podczas ładowania strony stanu magazynowego: ' . $e->getMessage());
         }
     }
 

@@ -9,6 +9,7 @@ use App\Models\ProductVariant;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class ReportController extends Controller
@@ -99,10 +100,11 @@ class ReportController extends Controller
 
         // Warianty z niskim stanem
         $lowStockVariants = \App\Models\ProductVariant::with(['product.category'])
+            ->where('stock_quantity', '>', 0)
             ->get()
             ->filter(function($variant) {
-                return $variant->stock_quantity > 0 && 
-                       $variant->stock_quantity <= $variant->product->low_stock_threshold;
+                return $variant->product && 
+                       $variant->stock_quantity <= ($variant->product->low_stock_threshold ?? 0);
             });
 
         // Warianty wyczerpane
@@ -111,15 +113,25 @@ class ReportController extends Controller
             ->get();
 
         // Wartość zapasów (produkty + warianty)
-        $productsValueResult = Product::whereDoesntHave('variants')
-            ->selectRaw('SUM(stock_quantity * price) as value')
-            ->first();
-        $productsValue = $productsValueResult && $productsValueResult->value ? $productsValueResult->value : 0;
+        try {
+            $productsValueResult = Product::whereDoesntHave('variants')
+                ->selectRaw('COALESCE(SUM(stock_quantity * price), 0) as value')
+                ->first();
+            $productsValue = $productsValueResult ? (float)($productsValueResult->value ?? 0) : 0;
+        } catch (\Exception $e) {
+            Log::warning('Error calculating products value: ' . $e->getMessage());
+            $productsValue = 0;
+        }
 
-        $variantsValueResult = ProductVariant::selectRaw('SUM(product_variants.stock_quantity * (products.price + product_variants.price_modifier)) as value')
-            ->join('products', 'product_variants.product_id', '=', 'products.id')
-            ->first();
-        $variantsValue = $variantsValueResult && $variantsValueResult->value ? $variantsValueResult->value : 0;
+        try {
+            $variantsValueResult = ProductVariant::selectRaw('COALESCE(SUM(product_variants.stock_quantity * (products.price + product_variants.price_modifier)), 0) as value')
+                ->join('products', 'product_variants.product_id', '=', 'products.id')
+                ->first();
+            $variantsValue = $variantsValueResult ? (float)($variantsValueResult->value ?? 0) : 0;
+        } catch (\Exception $e) {
+            Log::warning('Error calculating variants value: ' . $e->getMessage());
+            $variantsValue = 0;
+        }
 
         $totalValue = $productsValue + $variantsValue;
 
@@ -136,12 +148,14 @@ class ReportController extends Controller
                 'totalUnits'
             ));
         } catch (\Exception $e) {
-            \Log::error('Inventory report error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+            Log::error('Inventory report error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ]);
             
             return redirect()->route('admin.dashboard')
-                ->with('error', 'Wystąpił błąd podczas generowania raportu inwentarza.');
+                ->with('error', 'Wystąpił błąd podczas generowania raportu inwentarza: ' . $e->getMessage());
         }
     }
 }
