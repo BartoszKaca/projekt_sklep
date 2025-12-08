@@ -80,25 +80,6 @@
             <form method="POST" action="{{ route('admin.products.adjust-stock', $product) }}">
                 @csrf
 
-                @if($product->variants && $product->variants->count() > 0)
-                <div class="form-group">
-                    <label class="form-label">Wariant / Rozmiar</label>
-                    <select name="variant_id" id="variant-select" class="form-select">
-                        <option value="">Produkt główny (bez wariantu)</option>
-                        @foreach($product->variants as $variant)
-                            <option value="{{ $variant->id }}">
-                                {{ $variant->size ?? 'N/A' }}
-                                @if($variant->color)
-                                    - {{ $variant->color }}
-                                @endif
-                                (stan: {{ $variant->stock_quantity }} szt.)
-                            </option>
-                        @endforeach
-                    </select>
-                    <div class="form-help">Wybierz wariant, którego stan chcesz zmienić, lub pozostaw puste dla produktu głównego</div>
-                </div>
-                @endif
-
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Typ ruchu</label>
@@ -231,61 +212,6 @@
                     </div>
                 </div>
 
-                @if($product->variants && $product->variants->count() > 0)
-                <div style="padding-top: 1rem; border-top: 1px solid var(--border);">
-                    <div style="font-size: 0.75rem; color: var(--gray); text-transform: uppercase; margin-bottom: 0.75rem;">Warianty ({{ $product->variants->count() }})</div>
-                    @foreach($product->variants as $variant)
-                    <div style="padding: 1rem; background: var(--light-gray); border-radius: 8px; margin-bottom: 0.75rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                            <div>
-                                <div style="font-weight: 600;">{{ $variant->size ?? 'N/A' }}</div>
-                                @if($variant->color)
-                                <div style="font-size: 0.75rem; color: var(--gray);">{{ $variant->color }}</div>
-                                @endif
-                                <div style="font-size: 0.75rem; color: var(--gray); margin-top: 0.25rem;">SKU: {{ $variant->sku }}</div>
-                            </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 1.25rem; font-weight: 700; color: {{ $variant->stock_quantity <= 0 ? 'var(--danger)' : ($variant->stock_quantity <= 5 ? 'var(--warning)' : 'var(--success)') }};">
-                                    {{ $variant->stock_quantity }} szt.
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <form method="POST" action="{{ route('admin.variants.adjust-stock', $variant) }}" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; align-items: end;">
-                            @csrf
-                            <div>
-                                <select name="type" class="form-select" style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border);" required>
-                                    <option value="in">Dodaj (dostawa)</option>
-                                    <option value="out">Odejmij</option>
-                                    <option value="adjustment">Korekcja</option>
-                                </select>
-                            </div>
-                            <div>
-                                <input type="number" name="quantity" value="1" min="1" style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border);" required>
-                            </div>
-                            <div>
-                                <button type="submit" style="padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer;" title="Zapisz">
-                                    <i class="fas fa-save"></i>
-                                </button>
-                            </div>
-                            <div style="grid-column: 1 / -1;">
-                                <select name="reason" class="form-select" style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border); margin-top: 0.5rem;" required>
-                                    <option value="restock">Uzupełnienie</option>
-                                    <option value="return">Zwrot</option>
-                                    <option value="damage">Uszkodzenie</option>
-                                    <option value="loss">Strata</option>
-                                    <option value="inventory_count">Inwentaryzacja</option>
-                                    <option value="other">Inne</option>
-                                </select>
-                            </div>
-                            <div style="grid-column: 1 / -1;">
-                                <input type="text" name="reference" placeholder="Nr dokumentu (opcjonalnie)" style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border); margin-top: 0.5rem;">
-                            </div>
-                        </form>
-                    </div>
-                    @endforeach
-                </div>
-                @endif
 
                 <div style="padding: 1rem; background: var(--light-gray); border-radius: 10px;">
                     <div style="font-size: 0.75rem; color: var(--gray); text-transform: uppercase; margin-bottom: 0.5rem;">Próg niskiego stanu</div>
@@ -321,27 +247,4 @@
     </div>
 </div>
 
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const variantSelect = document.getElementById('variant-select');
-    if (variantSelect) {
-        const variants = @json(($product->variants ?? collect())->keyBy('id')->map(function($v) {
-            return [
-                'id' => $v->id,
-                'size' => $v->size ?? null,
-                'color' => $v->color ?? null,
-                'stock' => $v->stock_quantity ?? 0
-            ];
-        })->toArray());
-        
-        // Opcjonalnie: pokaż aktualny stan wariantu przy zmianie
-        variantSelect.addEventListener('change', function() {
-            const variantId = this.value;
-            // Można dodać podgląd stanu, ale nie jest konieczne
-        });
-    }
-});
-</script>
-@endpush
 @endsection
