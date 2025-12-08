@@ -12,10 +12,10 @@ class OrderObserver
 {
     /**
      * Tymczasowe przechowywanie informacji o zmianach statusu
-     * (nie możemy używać właściwości modelu, bo Laravel próbuje je zapisać do bazy)
+     * Używamy private static aby nie były dostępne jako właściwości modelu
      */
-    protected static array $statusChanges = [];
-    protected static array $paymentChanges = [];
+    private static array $statusChanges = [];
+    private static array $paymentChanges = [];
 
     /**
      * Handle the Order "updating" event.
