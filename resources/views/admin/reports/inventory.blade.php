@@ -144,7 +144,7 @@
 		<div class="summary-box-icon" style="background: #d1fae5; color: #065f46;">
 			<i class="fas fa-warehouse"></i>
 		</div>
-		<h3>{{ $totalUnits ?? \App\Models\Product::whereDoesntHave('variants')->sum('stock_quantity') }}</h3>
+		<h3>{{ $totalUnits }}</h3>
 		<p>Jednostek na stanie</p>
 	</div>
 
@@ -152,7 +152,7 @@
 		<div class="summary-box-icon" style="background: #fef3c7; color: #92400e;">
 			<i class="fas fa-exclamation-triangle"></i>
 		</div>
-		<h3>{{ $lowStockProducts->count() ?? 0 }}</h3>
+		<h3>{{ $lowStockProducts->count() }}</h3>
 		<p>Niski stan</p>
 	</div>
 
@@ -160,7 +160,7 @@
 		<div class="summary-box-icon" style="background: #fee2e2; color: #991b1b;">
 			<i class="fas fa-times-circle"></i>
 		</div>
-		<h3>{{ $outOfStock->count() ?? 0 }}</h3>
+		<h3>{{ $outOfStock->count() }}</h3>
 		<p>Brak w magazynie</p>
 	</div>
 
@@ -168,7 +168,7 @@
 		<div class="summary-box-icon" style="background: linear-gradient(135deg, #6366f1, #ec4899); color: white;">
 			<i class="fas fa-money-bill-wave"></i>
 		</div>
-		<h3>{{ number_format($totalValue ?? 0, 0) }} zł</h3>
+		<h3>{{ number_format($totalValue, 0) }} zł</h3>
 		<p>Wartość zapasów</p>
 	</div>
 </div>
