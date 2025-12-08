@@ -74,6 +74,7 @@ services:
       PMA_HOST: db
       PMA_USER: root
       PMA_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      PMA_ABSOLUTE_URI: http://www.bartoszkaca.online/pma/
       UPLOAD_LIMIT: 512M
       # Naprawa ostrzeżenia Apache
       APACHE_SERVER_NAME: localhost
